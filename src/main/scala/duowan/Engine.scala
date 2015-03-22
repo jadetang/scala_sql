@@ -25,39 +25,56 @@ object Engine {
 
     // def ls[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean =  a < b
 
-   //  def gt[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean =  a > b
+    //  def gt[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean =  a > b
 
-  //   def lsEq[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean = a <= b
+    //   def lsEq[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean = a <= b
 
-  //   def gtEq[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean = a >= b*/
+    //   def gtEq[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean = a >= b*/
 
     def ls(a: Any, b: Any): Boolean = {
-      a match {
-        case (a: Comparable[Any]) => (a compareTo b) < 0
-        case _ => false
+      if (a.getClass == b.getClass) {
+        a match {
+          case (a: Comparable[Any]) => (a compareTo b) < 0
+          case _ => false
+        }
+      } else {
+        false
       }
     }
 
-    def gt(a:Any, b:Any):Boolean = {
-      a match {
-        case (a: Comparable[Any]) => (a compareTo b) > 0
-        case _ => false
+    def gt(a: Any, b: Any): Boolean = {
+      if (a.getClass == b.getClass) {
+        a match {
+          case (a: Comparable[Any]) => (a compareTo b) > 0
+          case _ => false
+        }
+      } else {
+        false
       }
     }
 
-    def lsEq(a:Any, b:Any):Boolean = {
-      a match {
-        case (a: Comparable[Any]) => (a compareTo b) <= 0
-        case _ => false
+    def lsEq(a: Any, b: Any): Boolean = {
+      if (a.getClass == b.getClass) {
+        a match {
+          case (a: Comparable[Any]) => (a compareTo b) <= 0
+          case _ => false
+        }
+      } else {
+        false
       }
     }
 
-    def gtEq(a:Any, b:Any):Boolean = {
-      a match {
-        case (a: Comparable[Any]) => (a compareTo b) >= 0
-        case _ => false
+    def gtEq(a: Any, b: Any): Boolean = {
+      if (a.getClass == b.getClass) {
+        a match {
+          case (a: Comparable[Any]) => (a compareTo b) >= 0
+          case _ => false
+        }
+      } else {
+        false
       }
     }
+
 
 
     def evalEqualityLike(sqlExpr: EqualityLike, f: (Any, Any) => Boolean) = {
