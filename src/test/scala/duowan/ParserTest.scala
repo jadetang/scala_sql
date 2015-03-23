@@ -46,6 +46,46 @@ class ParserTest extends org.specs2.mutable.Specification {
   }
 
 
+  "table name and column" in {
+    val table = "user"
+    val column = "age"
+    val str = "user.age"
+    val result = fieldIdent(new lexical.Scanner(str))
+    log(result)
+    val sql = result.get
+    sql.isInstanceOf[FieldIdent] should beTrue
+    sql.asInstanceOf[FieldIdent].qualify mustEqual table
+    sql.asInstanceOf[FieldIdent].name mustEqual column
+
+  }
+
+  " (user.age = 30)  " in{
+    val str = " user.age = 30 "
+    val result = primaryWhereExpr(new lexical.Scanner(str))
+    log(result)
+    val sql = result.get
+    sql.isInstanceOf[Eq] should beTrue
+    sql.asInstanceOf[Eq].lhs.isInstanceOf[FieldIdent] should beTrue
+    sql.asInstanceOf[Eq].rhs.isInstanceOf[Literal] should beTrue
+  }
+
+  "where user.age = 30 and (user.name = 'tsc' and sex = 'male') "in {
+    val str = """ where user.age = 30 and (user.name = 'tsc' and sex='male') """
+    val result = whereExpr(new lexical.Scanner(str))
+    log(result)
+    val sql = result.get
+    sql.isInstanceOf[And] should beTrue
+  }
+
+ /* " user.age = 30 and (user.name = 'tsc' or user.sex= 'male') " in {
+    val str = """ where user.age = 30 and user.name = 'tsc' and user.sex= 'male'  """
+    val result = whereExpr(new lexical.Scanner(str))
+    log(result)
+    val sql = result.get
+    sql.isInstanceOf[And] should beTrue
+  }*/
+
+
 
   def log(result:ParseResult[SqlExpr]) = {
     result match {

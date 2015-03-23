@@ -28,6 +28,9 @@ object AST {
   case class Gt(lhs: SqlExpr,rhs: SqlExpr) extends EqualityLike
   case class LsEq(lhs: SqlExpr,rhs: SqlExpr) extends EqualityLike
   case class GtEq(lhs: SqlExpr,rhs: SqlExpr) extends EqualityLike
+
+
+  case class StarExpr() extends SqlExpr
   /*trait SqlExpr[+T] {
     def eval: T
   }

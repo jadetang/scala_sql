@@ -10,6 +10,8 @@ package duowan
 object Engine {
   type Row = Map[String, Any]
   type Table = List[Row]
+  type Schema = Map[String,Table]
+  type DataBase = Map[String,Schema]
 
   import AST._
 
@@ -17,19 +19,26 @@ object Engine {
     input filter (evalWhereEachRow(_, expr))
   }
 
+  def satisfy(expr: SqlExpr): PartialFunction[(String, Any), (String,Any)] = {
+    expr match {
+      case (x:StarExpr)=> {case(_1,_2)=>(_1,_2)}
+      case (x:FieldIdent)=>{case(x.name,_2)=>(x.name,_2)}
+    }
+  }
+
+  def selectEachRow(row: Row, expr: SqlExpr): Row = {
+    row collect(satisfy(expr))
+  }
+
+  def evalSelect(input:Table, expr: SqlExpr):Table = {
+    input map(selectEachRow(_,expr))
+  }
+
 
   def evalWhereEachRow(row: Row, expr: SqlExpr): Boolean = {
 
     def eq(a: Any, b: Any): Boolean = a == b
     def neq(a: Any, b: Any): Boolean = a != b
-
-    // def ls[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean =  a < b
-
-    //  def gt[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean =  a > b
-
-    //   def lsEq[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean = a <= b
-
-    //   def gtEq[T](a:T,b:T)(implicit evl: T => Ordered[T]):Boolean = a >= b*/
 
     def ls(a: Any, b: Any): Boolean = {
       if (a.getClass == b.getClass) {
@@ -84,6 +93,7 @@ object Engine {
           case Some(s) => f(s, right.value)
           case None => false
         }
+        case (left: FieldIdent, right: FieldIdent) => f(row.get(left.name),row.get(right.name))
       }
     }
 

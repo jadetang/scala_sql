@@ -2,6 +2,7 @@ package duowan
 
 
 import duowan.AST._
+import duowan.Parser._
 import duowan.TestData._
 import duowan.Engine._
 
@@ -21,6 +22,7 @@ class EngineTest extends org.specs2.mutable.Specification {
   val name = FieldIdent(null, "name")
   val sex = FieldIdent(null, "sex")
   val age = FieldIdent(null, "age")
+  val star = StarExpr()
 
   "check everything must be ok" should {
     printTable(user)
@@ -103,6 +105,34 @@ class EngineTest extends org.specs2.mutable.Specification {
     val nameLsEqTsc = LsEq(name,Literal("tsc"))
     printTable(evalWhere(user,nameLsEqTsc))
     evalWhere(user,nameLsEqTsc).size must be_>(1)
+  }
+
+
+  "first try" in {
+    val str = """ where user.name = 'tsc' and (user.age = 19 or age = 30) """
+    val result = whereExpr(new lexical.Scanner(str))
+    val sql = result.get
+    printTable(evalWhere(user,sql))
+    evalWhere(user,sql).size  must be_>(1)
+  }
+
+
+  " user.name = user.name " in {
+    val str = """ where user.name = user.name """
+    val result = whereExpr(new lexical.Scanner(str))
+    val sql = result.get
+    printTable(evalWhere(user,sql))
+    evalWhere(user,sql).size  must beEqualTo(user.size)
+  }
+
+  "select * from user" in {
+    printTable(evalSelect(user,star))
+    true must beTrue
+  }
+
+  "select age from user" in {
+    printTable(evalSelect(user,age))
+    true must beTrue
   }
 
 

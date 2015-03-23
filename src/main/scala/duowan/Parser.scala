@@ -21,13 +21,13 @@ object Parser extends StandardTokenParsers {
     }
 
     override def token: Parser[Token] =
-      (identChar ~ rep(identChar | digit) ^^ { case first ~ rest => processIdent(first :: rest mkString "")}
+      (identChar ~ rep(identChar | digit) ^^ { case first ~ rest => processIdent(first :: rest mkString "") }
         | rep1(digit) ~ opt('.' ~> rep(digit)) ^^ {
         case i ~ None => NumericLit(i mkString "")
         case i ~ Some(d) => FloatLit(i.mkString("") + "." + d.mkString(""))
       }
-        | '\'' ~ rep(chrExcept('\'', '\n', EofCh)) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "")}
-        | '\"' ~ rep(chrExcept('\"', '\n', EofCh)) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "")}
+        | '\'' ~ rep(chrExcept('\'', '\n', EofCh)) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "") }
+        | '\"' ~ rep(chrExcept('\"', '\n', EofCh)) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "") }
         | EofCh ^^^ EOF
         | '\'' ~> failure("unclosed string literal")
         | '\"' ~> failure("unclosed string literal")
@@ -67,17 +67,70 @@ object Parser extends StandardTokenParsers {
   lexical.delimiters +=(
     "*", "+", "-", "<", "=", "<>", "!=", "<=", ">=", ">", "/", "(", ")", ",", ".", ";"
     )
+
   def floatLit: Parser[String] =
     elem("decimal", _.isInstanceOf[lexical.FloatLit]) ^^ (_.chars)
 
   def literal: Parser[SqlExpr] = {
-    numericLit ^^ { case i => Literal(i.toInt)} |
-      stringLit ^^ { case s => Literal(s.toString)} |
-      floatLit ^^ { case f => Literal(f.toDouble)} |
-    "null" ^^ (_ => Literal(null))
+    numericLit ^^ { case i => Literal(i.toInt) } |
+      stringLit ^^ { case s => Literal(s.toString) } |
+      floatLit ^^ { case f => Literal(f.toDouble) } |
+      "null" ^^ (_ => Literal(null))
   }
 
-  //def primaryWhereExpr: Parser[SqlExpr] =
+  def fieldIdent: Parser[SqlExpr] = {
+    ident ~ opt("." ~> ident) ^^ {
+      case table ~ Some(b: String) => FieldIdent(table, b)
+      case column ~ None => FieldIdent(null, column)
+    }
+  }
+
+  def primaryWhereExpr: Parser[SqlExpr] = {
+    (literal|fieldIdent) ~ ("=" | "<>" | "!=" | "<" | "<=" | ">" | ">=") ~ (literal|fieldIdent) ^^ {
+      case lhs ~ "=" ~ rhs => Eq(lhs, rhs)
+      case lhs ~ "<>" ~ rhs => Neq(lhs, rhs)
+      case lhs ~ "!=" ~ rhs => Neq(lhs, rhs)
+      case lhs ~ "<" ~ rhs => Ls(lhs, rhs)
+      case lhs ~ "<=" ~ rhs => LsEq(lhs, rhs)
+      case lhs ~ ">" ~ rhs => Gt(lhs, rhs)
+      case lhs ~ ">=" ~ rhs => GtEq(lhs, rhs)
+    } | "(" ~> expr  <~ ")"
+  }
+
+  def andExpr: Parser[SqlExpr] =
+    primaryWhereExpr * ( "and" ^^^ { (a: SqlExpr, b: SqlExpr) => And(a, b) } )
+
+  def orExpr: Parser[SqlExpr] =
+    andExpr * ( "or" ^^^ { (a: SqlExpr, b: SqlExpr) => Or(a, b) } )
+
+  def expr: Parser[SqlExpr] = orExpr
+
+  def whereExpr: Parser[SqlExpr] = "where" ~> expr
 
 
-}
+
+  /*def cmp_expr: Parser[SqlExpr] = {
+    idental~ (
+      ("=" | "<>" | "!=" | "<" | "<=" | ">" | ">=") ~ idental ^^ {
+        case op ~ rhs => (op, rhs)
+      }
+    ) ^^ {
+      case lhs ~ elems =>
+        elems.foldLeft(lhs) {
+          case (acc, (("=", rhs: SqlExpr))) => Eq(acc, rhs)
+          case (acc, (("<>", rhs: SqlExpr))) => Neq(acc, rhs)
+          case (acc, (("!=", rhs: SqlExpr))) => Neq(acc, rhs)
+          case (acc, (("<", rhs: SqlExpr))) => Ls(acc, rhs)
+          case (acc, (("<=", rhs: SqlExpr))) => LsEq(acc, rhs)
+          case (acc, ((">", rhs: SqlExpr))) => Gt(acc, rhs)
+          case (acc, ((">=", rhs: SqlExpr))) => GtEq(acc, rhs)
+       /*   case (acc, (("between", l: SqlExpr, r: SqlExpr))) => And(Ge(acc, l), Le(acc, r))
+          case (acc, (("in", e: Seq[_], n: Boolean))) => In(acc, e.asInstanceOf[Seq[SqlExpr]], n)
+          case (acc, (("in", s: SelectStmt, n: Boolean))) => In(acc, Seq(Subselect(s)), n)
+          case (acc, (("like", e: SqlExpr, n: Boolean))) => Like(acc, e, n)*/
+        }
+    }
+  }*/
+
+
+  }
