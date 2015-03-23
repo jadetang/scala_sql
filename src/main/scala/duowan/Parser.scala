@@ -1,18 +1,57 @@
 package duowan
 
+import duowan.AST._
 
+import scala.util.matching.Regex
+import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
+import scala.util.parsing.input.CharArrayReader.EofCh
+
 
 /**
- *
- * @author tangsicheng
- * @version 1.0    
- * @since 1.0
+ * Created by jadetang on 15-3-22.
  */
 object Parser extends StandardTokenParsers {
 
-  import AST._
 
+  class SqlLexical extends StdLexical {
+
+    case class FloatLit(chars: String) extends Token {
+      override def toString = chars
+    }
+
+    override def token: Parser[Token] =
+      (identChar ~ rep(identChar | digit) ^^ { case first ~ rest => processIdent(first :: rest mkString "")}
+        | rep1(digit) ~ opt('.' ~> rep(digit)) ^^ {
+        case i ~ None => NumericLit(i mkString "")
+        case i ~ Some(d) => FloatLit(i.mkString("") + "." + d.mkString(""))
+      }
+        | '\'' ~ rep(chrExcept('\'', '\n', EofCh)) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "")}
+        | '\"' ~ rep(chrExcept('\"', '\n', EofCh)) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "")}
+        | EofCh ^^^ EOF
+        | '\'' ~> failure("unclosed string literal")
+        | '\"' ~> failure("unclosed string literal")
+        | delim
+        | failure("illegal character")
+        )
+
+    def regex(r: Regex): Parser[String] = new Parser[String] {
+      def apply(in: Input) = {
+        val source = in.source
+        val offset = in.offset
+        val start = offset // handleWhiteSpace(source, offset)
+        (r findPrefixMatchOf (source.subSequence(start, source.length))) match {
+          case Some(matched) =>
+            Success(source.subSequence(start, start + matched.end).toString,
+              in.drop(start + matched.end - offset))
+          case None =>
+            Success("", in)
+        }
+      }
+    }
+  }
+
+  override val lexical = new SqlLexical
   val functions = Seq("count", "sum", "avg", "min", "max", "substring", "extract")
 
   lexical.reserved +=(
@@ -28,54 +67,17 @@ object Parser extends StandardTokenParsers {
   lexical.delimiters +=(
     "*", "+", "-", "<", "=", "<>", "!=", "<=", ">=", ">", "/", "(", ")", ",", ".", ";"
     )
+  def floatLit: Parser[String] =
+    elem("decimal", _.isInstanceOf[lexical.FloatLit]) ^^ (_.chars)
 
   def literal: Parser[SqlExpr] = {
-    numericLit ^^ { case i => Literal(i.toDouble) } |
-    stringLit ^^ { case s => Literal(s) } |
+    numericLit ^^ { case i => Literal(i.toInt)} |
+      stringLit ^^ { case s => Literal(s.toString)} |
+      floatLit ^^ { case f => Literal(f.toDouble)} |
     "null" ^^ (_ => Literal(null))
   }
 
-  /* def filter: Parser[SqlExpr] = "where" ~> expr
-
-   def expr: Parser[SqlExpr] = or_expr
-
-   def or_expr: Parser[SqlExpr] =
-     and_expr * ( "or" ^^^ { (a: SqlExpr, b: SqlExpr) => Or(a, b) } )
-
-   def and_expr: Parser[SqlExpr] =
-     cmp_expr * ( "and" ^^^ { (a: SqlExpr, b: SqlExpr) => And(a, b) } )
-
-   def cmp_expr: Parser[SqlExpr] =
-     add_expr ~ rep(
-       ("=" | "<>" | "!=" | "<" | "<=" | ">" | ">=") ~ add_expr ^^ {
-         case op ~ rhs => (op, rhs)
-       } |
-         "between" ~ add_expr ~ "and" ~ add_expr ^^ {
-           case op ~ a ~ _ ~ b => (op, a, b)
-         } |
-         opt("not") ~ "in" ~ "(" ~ (select | rep1sep(expr, ",")) ~ ")" ^^ {
-           case n ~ op ~ _ ~ a ~ _ => (op, a, n.isDefined)
-         } |
-         opt("not") ~ "like" ~ add_expr ^^ { case n ~ op ~ a => (op, a, n.isDefined) }
-     ) ^^ {
-       case lhs ~ elems =>
-         elems.foldLeft(lhs) {
-           case (acc, (("=", rhs: SqlExpr))) => Eq(acc, rhs)
-           case (acc, (("<>", rhs: SqlExpr))) => Neq(acc, rhs)
-           case (acc, (("!=", rhs: SqlExpr))) => Neq(acc, rhs)
-           case (acc, (("<", rhs: SqlExpr))) => Lt(acc, rhs)
-           case (acc, (("<=", rhs: SqlExpr))) => Le(acc, rhs)
-           case (acc, ((">", rhs: SqlExpr))) => Gt(acc, rhs)
-           case (acc, ((">=", rhs: SqlExpr))) => Ge(acc, rhs)
-           case (acc, (("between", l: SqlExpr, r: SqlExpr))) => And(Ge(acc, l), Le(acc, r))
-           case (acc, (("in", e: Seq[_], n: Boolean))) => In(acc, e.asInstanceOf[Seq[SqlExpr]], n)
-           case (acc, (("in", s: SelectStmt, n: Boolean))) => In(acc, Seq(Subselect(s)), n)
-           case (acc, (("like", e: SqlExpr, n: Boolean))) => Like(acc, e, n)
-         }
-     } |
-       "not" ~> cmp_expr ^^ (Not(_)) |
-       "exists" ~> "(" ~> select <~ ")" ^^ { case s => Exists(Subselect(s)) }
- */
+  //def primaryWhereExpr: Parser[SqlExpr] =
 
 
 }
