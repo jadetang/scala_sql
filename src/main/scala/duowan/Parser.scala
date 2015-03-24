@@ -20,14 +20,18 @@ object Parser extends StandardTokenParsers {
       override def toString = chars
     }
 
+   /* case class Ident(chars:String) extends Token{
+      override def toString = chars
+    }*/
+
     override def token: Parser[Token] =
-      (identChar ~ rep(identChar | digit) ^^ { case first ~ rest => processIdent(first :: rest mkString "") }
+      (identChar ~ rep(identChar | digit) ^^ { case first ~ rest => processIdent(first :: rest mkString "")}
         | rep1(digit) ~ opt('.' ~> rep(digit)) ^^ {
         case i ~ None => NumericLit(i mkString "")
         case i ~ Some(d) => FloatLit(i.mkString("") + "." + d.mkString(""))
       }
-        | '\'' ~ rep(chrExcept('\'', '\n', EofCh)) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "") }
-        | '\"' ~ rep(chrExcept('\"', '\n', EofCh)) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "") }
+        | '\'' ~ rep(chrExcept('\'', '\n', EofCh)) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "")}
+        | '\"' ~ rep(chrExcept('\"', '\n', EofCh)) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "")}
         | EofCh ^^^ EOF
         | '\'' ~> failure("unclosed string literal")
         | '\"' ~> failure("unclosed string literal")
@@ -69,24 +73,29 @@ object Parser extends StandardTokenParsers {
     )
 
   def floatLit: Parser[String] =
-    elem("decimal", _.isInstanceOf[lexical.FloatLit]) ^^ (_.chars)
+    elem("decimal", x=>x.isInstanceOf[lexical.FloatLit]) ^^ (_.chars)
 
   def literal: Parser[SqlExpr] = {
-    numericLit ^^ { case i => Literal(i.toInt) } |
-      stringLit ^^ { case s => Literal(s.toString) } |
-      floatLit ^^ { case f => Literal(f.toDouble) } |
+    numericLit ^^ { case i => Literal(i.toInt)} |
+      stringLit ^^ { case s => Literal(s.toString)} |
+      floatLit ^^ { case f => Literal(f.toDouble)} |
       "null" ^^ (_ => Literal(null))
   }
 
   def fieldIdent: Parser[SqlExpr] = {
     ident ~ opt("." ~> ident) ^^ {
-      case table ~ Some(b: String) => FieldIdent(table, b)
-      case column ~ None => FieldIdent(null, column)
+      case table ~ Some(b: String) => FieldIdent(Option(table), b)
+      case column ~ None => FieldIdent(None, column)
     }
   }
 
+ //override def ident:Parser[String] = elem("ident",x=>x.isInstanceOf[lexical.Ident]&&(!(x.chars.contains("."))))  ^^ (_.chars)
+/*
+  override def ident: Parser[String] =
+    elem("identifier", _.isInstanceOf[scala.util.parsing.combinator.token.Tokens.Identifier]) ^^ (_.chars)*/
+
   def primaryWhereExpr: Parser[SqlExpr] = {
-    (literal|fieldIdent) ~ ("=" | "<>" | "!=" | "<" | "<=" | ">" | ">=") ~ (literal|fieldIdent) ^^ {
+    (literal | fieldIdent) ~ ("=" | "<>" | "!=" | "<" | "<=" | ">" | ">=") ~ (literal | fieldIdent) ^^ {
       case lhs ~ "=" ~ rhs => Eq(lhs, rhs)
       case lhs ~ "<>" ~ rhs => Neq(lhs, rhs)
       case lhs ~ "!=" ~ rhs => Neq(lhs, rhs)
@@ -94,43 +103,56 @@ object Parser extends StandardTokenParsers {
       case lhs ~ "<=" ~ rhs => LsEq(lhs, rhs)
       case lhs ~ ">" ~ rhs => Gt(lhs, rhs)
       case lhs ~ ">=" ~ rhs => GtEq(lhs, rhs)
-    } | "(" ~> expr  <~ ")"
+    } | "(" ~> expr <~ ")"
   }
 
   def andExpr: Parser[SqlExpr] =
-    primaryWhereExpr * ( "and" ^^^ { (a: SqlExpr, b: SqlExpr) => And(a, b) } )
+    primaryWhereExpr * ("and" ^^^ { (a: SqlExpr, b: SqlExpr) => And(a, b)})
 
   def orExpr: Parser[SqlExpr] =
-    andExpr * ( "or" ^^^ { (a: SqlExpr, b: SqlExpr) => Or(a, b) } )
+    andExpr * ("or" ^^^ { (a: SqlExpr, b: SqlExpr) => Or(a, b)})
 
   def expr: Parser[SqlExpr] = orExpr
 
   def whereExpr: Parser[SqlExpr] = "where" ~> expr
 
+  def projectionStatements: Parser[Seq[SqlProj]] = "select"~>repsep(projection, ",")
 
-
-  /*def cmp_expr: Parser[SqlExpr] = {
-    idental~ (
-      ("=" | "<>" | "!=" | "<" | "<=" | ">" | ">=") ~ idental ^^ {
-        case op ~ rhs => (op, rhs)
+  def projection: Parser[SqlProj] =
+    "*" ^^ (_ => StarProj()) |
+      primarySelectExpr ~ opt("as" ~> ident) ^^ {
+        case expr ~ alias => Projection(expr, alias)
       }
-    ) ^^ {
-      case lhs ~ elems =>
-        elems.foldLeft(lhs) {
-          case (acc, (("=", rhs: SqlExpr))) => Eq(acc, rhs)
-          case (acc, (("<>", rhs: SqlExpr))) => Neq(acc, rhs)
-          case (acc, (("!=", rhs: SqlExpr))) => Neq(acc, rhs)
-          case (acc, (("<", rhs: SqlExpr))) => Ls(acc, rhs)
-          case (acc, (("<=", rhs: SqlExpr))) => LsEq(acc, rhs)
-          case (acc, ((">", rhs: SqlExpr))) => Gt(acc, rhs)
-          case (acc, ((">=", rhs: SqlExpr))) => GtEq(acc, rhs)
-       /*   case (acc, (("between", l: SqlExpr, r: SqlExpr))) => And(Ge(acc, l), Le(acc, r))
-          case (acc, (("in", e: Seq[_], n: Boolean))) => In(acc, e.asInstanceOf[Seq[SqlExpr]], n)
-          case (acc, (("in", s: SelectStmt, n: Boolean))) => In(acc, Seq(Subselect(s)), n)
-          case (acc, (("like", e: SqlExpr, n: Boolean))) => Like(acc, e, n)*/
-        }
-    }
-  }*/
 
-
+  def selectLiteral: Parser[SqlProj] = {
+    numericLit ^^ { case i => Literal(i.toInt)} |
+      stringLit ^^ { case s => Literal(s.toString)} |
+      floatLit ^^ { case f => Literal(f.toDouble)} |
+      "null" ^^ (_ => Literal(null))
   }
+
+
+
+  def selectIdent:Parser[SqlProj] = {
+    ident ~ opt("." ~> ident) ^^ {
+      case table ~ Some(b: String) => FieldIdent(Option(table), b)
+      case column ~ None => FieldIdent(None, column)
+    }
+  }
+
+  def primarySelectExpr: Parser[SqlProj] = {
+    selectLiteral | selectIdent | knowFunction
+  }
+
+  def knowFunction: Parser[SqlProj] = {
+    def singeSelectExpr: Parser[SqlProj] = {
+      selectLiteral | selectIdent
+    }
+    "count" ~> "(" ~> ("*" ^^ (_ => CountStar()) | opt("distinct") ~ singeSelectExpr ^^ { case d ~ e => CountExpr(e, d.isDefined)}) <~ ")" |
+      "min" ~> "(" ~> singeSelectExpr <~ ")" ^^ (Min(_)) |
+      "max" ~> "(" ~> singeSelectExpr <~ ")" ^^ (Max(_)) |
+      "sum" ~> "(" ~> (opt("distinct") ~ singeSelectExpr) <~ ")" ^^ { case d ~ e => Sum(e, d.isDefined)} |
+      "avg" ~> "(" ~> (opt("distinct") ~ singeSelectExpr) <~ ")" ^^ { case d ~ e => Avg(e, d.isDefined)}
+  }
+
+}

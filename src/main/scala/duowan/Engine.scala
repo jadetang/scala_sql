@@ -19,18 +19,20 @@ object Engine {
     input filter (evalWhereEachRow(_, expr))
   }
 
-  def satisfy(expr: SqlExpr): PartialFunction[(String, Any), (String,Any)] = {
-    expr match {
+  //todo
+  def satisfy(expr: SqlProj): PartialFunction[(String, Any), (String,Any)] = {
+    /*expr match {
       case (x:StarExpr)=> {case(_1,_2)=>(_1,_2)}
       case (x:FieldIdent)=>{case(x.name,_2)=>(x.name,_2)}
-    }
+    }*/
+    ???
   }
 
-  def selectEachRow(row: Row, expr: SqlExpr): Row = {
+  def selectEachRow(row: Row, expr: SqlProj): Row = {
     row collect(satisfy(expr))
   }
 
-  def evalSelect(input:Table, expr: SqlExpr):Table = {
+  def evalSelect(input:Table, expr: SqlProj):Table = {
     input map(selectEachRow(_,expr))
   }
 

@@ -10,7 +10,7 @@ class ParserTest extends org.specs2.mutable.Specification {
 
   "int literal parser" in {
     val number = "30"
-    val result = literal(new  Parser.lexical.Scanner(number))
+    val result = literal(new Parser.lexical.Scanner(number))
     log(result)
     val sql = result.get
     sql.isInstanceOf[Literal] should beTrue
@@ -22,7 +22,7 @@ class ParserTest extends org.specs2.mutable.Specification {
     val sex = """ 'male' """
     val result = literal(new Parser.lexical.Scanner(sex))
     log(result)
-    val sql  = result.get
+    val sql = result.get
     sql.isInstanceOf[Literal] should beTrue
     sql.asInstanceOf[Literal].value should equalTo("male")
   }
@@ -31,7 +31,7 @@ class ParserTest extends org.specs2.mutable.Specification {
     val nullexpress = """ null """
     val result = literal(new Parser.lexical.Scanner(nullexpress))
     log(result)
-    val sql  = result.get
+    val sql = result.get
     sql.isInstanceOf[Literal] should beTrue
     sql.asInstanceOf[Literal].value mustEqual null
   }
@@ -40,7 +40,7 @@ class ParserTest extends org.specs2.mutable.Specification {
     val doublevalue = "3.2"
     val result = literal(new Parser.lexical.Scanner(doublevalue))
     log(result)
-    val sql  = result.get
+    val sql = result.get
     sql.isInstanceOf[Literal] should beTrue
     sql.asInstanceOf[Literal].value mustEqual 3.2
   }
@@ -59,7 +59,7 @@ class ParserTest extends org.specs2.mutable.Specification {
 
   }
 
-  " (user.age = 30)  " in{
+  " (user.age = 30)  " in {
     val str = " user.age = 30 "
     val result = primaryWhereExpr(new lexical.Scanner(str))
     log(result)
@@ -69,7 +69,7 @@ class ParserTest extends org.specs2.mutable.Specification {
     sql.asInstanceOf[Eq].rhs.isInstanceOf[Literal] should beTrue
   }
 
-  "where user.age = 30 and (user.name = 'tsc' and sex = 'male') "in {
+  "where user.age = 30 and (user.name = 'tsc' and sex = 'male') " in {
     val str = """ where user.age = 30 and (user.name = 'tsc' and sex='male') """
     val result = whereExpr(new lexical.Scanner(str))
     log(result)
@@ -77,17 +77,31 @@ class ParserTest extends org.specs2.mutable.Specification {
     sql.isInstanceOf[And] should beTrue
   }
 
- /* " user.age = 30 and (user.name = 'tsc' or user.sex= 'male') " in {
-    val str = """ where user.age = 30 and user.name = 'tsc' and user.sex= 'male'  """
-    val result = whereExpr(new lexical.Scanner(str))
-    log(result)
-    val sql = result.get
-    sql.isInstanceOf[And] should beTrue
-  }*/
+  /* " user.age = 30 and (user.name = 'tsc' or user.sex= 'male') " in {
+     val str = """ where user.age = 30 and user.name = 'tsc' and user.sex= 'male'  """
+     val result = whereExpr(new lexical.Scanner(str))
+     log(result)
+     val sql = result.get
+     sql.isInstanceOf[And] should beTrue
+   }*/
+
+  "select test" >> {
+    "select all kind" in {
+      val str = """ select user.age as age, '1',1,2.2, max(name), count(distinct name), sum(age), avg(name)  """
+      val result = projectionStatements(new lexical.Scanner(str))
+      result match {
+        case Success(msg, _) => println(msg)
+        case Failure(msg, _) => println("Failure: " + msg)
+        case Error(msg, _) => println("Error: " + msg)
+      }
+      //log(result)
+      val sql = result.get
+      sql.isInstanceOf[Seq[SqlProj]] should beTrue
+    }
+  }
 
 
-
-  def log(result:ParseResult[SqlExpr]) = {
+  def log(result: ParseResult[SqlExpr]) = {
     result match {
       case Success(msg, _) => println(msg)
       case Failure(msg, _) => println("Failure: " + msg)

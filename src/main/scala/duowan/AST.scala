@@ -13,9 +13,9 @@ object AST {
     val rhs: SqlExpr
   }
 
-  case class Literal(value:Any) extends SqlExpr
+  case class Literal(value:Any) extends SqlExpr with SqlProj
 
-  case class FieldIdent(qualify:String,name:String) extends SqlExpr
+  case class FieldIdent(qualify:Option[String],name:String) extends SqlExpr with SqlProj
 
   case class Or(lhs: SqlExpr, rhs: SqlExpr) extends Binop
   case class And(lhs: SqlExpr, rhs: SqlExpr) extends Binop
@@ -31,6 +31,28 @@ object AST {
 
 
   case class StarExpr() extends SqlExpr
+
+
+  trait SqlProj extends Node
+
+  trait SqlAgg extends SqlProj
+
+
+  case class StarProj() extends SqlProj
+
+  case class FiledProj(table:String,column:String,alias:String) extends SqlProj
+  case class Projection(sqlProj: SqlProj,alias:Option[String]) extends SqlProj
+
+  case class CountStar() extends SqlAgg
+
+  case class CountExpr(expr: SqlProj, distinct: Boolean) extends SqlAgg
+
+  case class Sum(expr: SqlProj, distinct: Boolean) extends SqlAgg
+  case class Avg(expr: SqlProj, distinct: Boolean) extends SqlAgg
+  case class Min(expr: SqlProj) extends SqlAgg
+  case class Max(expr: SqlProj) extends SqlAgg
+
+
   /*trait SqlExpr[+T] {
     def eval: T
   }
