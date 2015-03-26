@@ -20,9 +20,9 @@ object Parser extends StandardTokenParsers {
       override def toString = chars
     }
 
-   /* case class Ident(chars:String) extends Token{
-      override def toString = chars
-    }*/
+    /* case class Ident(chars:String) extends Token{
+       override def toString = chars
+     }*/
 
     override def token: Parser[Token] =
       (identChar ~ rep(identChar | digit) ^^ { case first ~ rest => processIdent(first :: rest mkString "")}
@@ -72,8 +72,12 @@ object Parser extends StandardTokenParsers {
     "*", "+", "-", "<", "=", "<>", "!=", "<=", ">=", ">", "/", "(", ")", ",", ".", ";"
     )
 
+
+
+
+
   def floatLit: Parser[String] =
-    elem("decimal", x=>x.isInstanceOf[lexical.FloatLit]) ^^ (_.chars)
+    elem("decimal", x => x.isInstanceOf[lexical.FloatLit]) ^^ (_.chars)
 
   def literal: Parser[SqlExpr] = {
     numericLit ^^ { case i => Literal(i.toInt)} |
@@ -89,10 +93,10 @@ object Parser extends StandardTokenParsers {
     }
   }
 
- //override def ident:Parser[String] = elem("ident",x=>x.isInstanceOf[lexical.Ident]&&(!(x.chars.contains("."))))  ^^ (_.chars)
-/*
-  override def ident: Parser[String] =
-    elem("identifier", _.isInstanceOf[scala.util.parsing.combinator.token.Tokens.Identifier]) ^^ (_.chars)*/
+  //override def ident:Parser[String] = elem("ident",x=>x.isInstanceOf[lexical.Ident]&&(!(x.chars.contains("."))))  ^^ (_.chars)
+  /*
+    override def ident: Parser[String] =
+      elem("identifier", _.isInstanceOf[scala.util.parsing.combinator.token.Tokens.Identifier]) ^^ (_.chars)*/
 
   def primaryWhereExpr: Parser[SqlExpr] = {
     (literal | fieldIdent) ~ ("=" | "<>" | "!=" | "<" | "<=" | ">" | ">=") ~ (literal | fieldIdent) ^^ {
@@ -114,9 +118,9 @@ object Parser extends StandardTokenParsers {
 
   def expr: Parser[SqlExpr] = orExpr
 
-  def whereExpr: Parser[SqlExpr] = "where" ~> expr
+  def whereExpr: Parser[SqlExpr] = "where"~>expr
 
-  def projectionStatements: Parser[Seq[SqlProj]] = "select"~>repsep(projection, ",")
+  def projectionStatements: Parser[Seq[SqlProj]] = repsep(projection, ",")
 
   def projection: Parser[SqlProj] =
     "*" ^^ (_ => StarProj()) |
@@ -132,8 +136,7 @@ object Parser extends StandardTokenParsers {
   }
 
 
-
-  def selectIdent:Parser[SqlProj] = {
+  def selectIdent: Parser[SqlProj] = {
     ident ~ opt("." ~> ident) ^^ {
       case table ~ Some(b: String) => FieldIdent(Option(table), b)
       case column ~ None => FieldIdent(None, column)
@@ -154,5 +157,25 @@ object Parser extends StandardTokenParsers {
       "sum" ~> "(" ~> (opt("distinct") ~ singeSelectExpr) <~ ")" ^^ { case d ~ e => Sum(e, d.isDefined)} |
       "avg" ~> "(" ~> (opt("distinct") ~ singeSelectExpr) <~ ")" ^^ { case d ~ e => Avg(e, d.isDefined)}
   }
+
+  //todo
+  def select:Parser[SelectStmt] = "select" ~> projectionStatements ~ fromStatements~opt(whereExpr) ^^ {
+    case p ~ f ~ w => SelectStmt(p,f,w,None,None,None)
+  }
+
+  def fromStatements:Parser[SqlRelation] = "from" ~> relations
+
+  def parse(sql: String): Option[SelectStmt] = phrase(select)(new lexical.Scanner(sql)) match {
+    case Success(r, q) => Option(r)
+    case x => throw new IllegalArgumentException(x.toString);
+  }
+
+  def relations:Parser[SqlRelation] = simple_relation
+
+  def simple_relation: Parser[SqlRelation] =ident ~ opt("as") ~ opt(ident) ^^ {
+    case ident ~ _ ~ alias => TableRelationAST(ident, alias)
+  }
+
+
 
 }

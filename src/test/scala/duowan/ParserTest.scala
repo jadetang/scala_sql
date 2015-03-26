@@ -89,17 +89,35 @@ class ParserTest extends org.specs2.mutable.Specification {
     "select all kind" in {
       val str = """ select user.age as age, '1',1,2.2, max(name), count(distinct name), sum(age), avg(name)  """
       val result = projectionStatements(new lexical.Scanner(str))
-      result match {
-        case Success(msg, _) => println(msg)
-        case Failure(msg, _) => println("Failure: " + msg)
-        case Error(msg, _) => println("Error: " + msg)
-      }
+      logSelect(result)
       //log(result)
       val sql = result.get
       sql.isInstanceOf[Seq[SqlProj]] should beTrue
     }
+
+    "select name as g" in {
+      val str = """ select name as 2 """
+      phrase(projectionStatements)(new lexical.Scanner(str)) match {
+        case Success(r, q) => Option(r)
+        case x => println(x); None
+      }
+      val result = projectionStatements(new lexical.Scanner(str))
+      //logSelect(result)
+      //log(result)
+      val sql = result.get
+      sql.isInstanceOf[Seq[SqlProj]] should beTrue
+    }
+
   }
 
+
+  def logSelect(result: Parser.ParseResult[Seq[SqlProj]]): Unit = {
+    result match {
+      case Success(msg, _) => println(msg)
+      case Failure(msg, _) => println("Failure: " + msg)
+      case Error(msg, _) => println("Error: " + msg)
+    }
+  }
 
   def log(result: ParseResult[SqlExpr]) = {
     result match {

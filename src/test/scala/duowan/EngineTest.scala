@@ -22,7 +22,7 @@ class EngineTest extends org.specs2.mutable.Specification {
   val name = FieldIdent(null, "name")
   val sex = FieldIdent(null, "sex")
   val age = FieldIdent(null, "age")
-  val star = StarExpr()
+//  val star = StarExpr()
 
   "check everything must be ok" should {
     printTable(user)
@@ -125,15 +125,37 @@ class EngineTest extends org.specs2.mutable.Specification {
     evalWhere(user,sql).size  must beEqualTo(user.size)
   }
 
-  "select * from user" in {
-    printTable(evalSelect(user,star))
-    true must beTrue
+  "eval select" >> {
+    "select * from user" in {
+      val sql = Seq(StarProj())
+      //printTable(evalSelect(user, sql))
+      evalSelect(user, sql).size must be_>(0)
+    }
+
+
+    "select name as n from user "in {
+      val str = """ select name as n, age as a,sex as m, "20" as twenty, "man" as mx from user"""
+     // val result = projectionStatements(new lexical.Scanner(str))
+     // val sql = result.get
+      printTable(query(user,str))
+      query(user,str).size must be_>(0)
+    }
+
+    "select name from user where sex = 'male' " in {
+      val str = """ select *, "图灵" as greatman from user where sex = 'male'  and (age >2 or name = 'tsc' ) """
+      printTable(query(user,str))
+      query(user,str).size must be_>(0)
+    }
+
+
   }
 
-  "select age from user" in {
+
+
+ /* "select age from user" in {
     printTable(evalSelect(user,age))
     true must beTrue
-  }
+  }*/
 
 
 

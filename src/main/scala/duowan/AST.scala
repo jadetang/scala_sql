@@ -1,8 +1,9 @@
 package duowan
 
 
-
 object AST {
+
+//  class IllegalSqlException( message:String) extends Exception
 
   trait Node
 
@@ -13,24 +14,30 @@ object AST {
     val rhs: SqlExpr
   }
 
-  case class Literal(value:Any) extends SqlExpr with SqlProj
+  case class Literal(value: Any) extends SqlExpr with SqlProj
 
-  case class FieldIdent(qualify:Option[String],name:String) extends SqlExpr with SqlProj
+  case class FieldIdent(qualify: Option[String], name: String) extends SqlExpr with SqlProj
 
   case class Or(lhs: SqlExpr, rhs: SqlExpr) extends Binop
+
   case class And(lhs: SqlExpr, rhs: SqlExpr) extends Binop
 
   trait EqualityLike extends Binop
 
   case class Eq(lhs: SqlExpr, rhs: SqlExpr) extends EqualityLike
-  case class Neq(lhs: SqlExpr,rhs: SqlExpr) extends EqualityLike
-  case class Ls(lhs: SqlExpr,rhs: SqlExpr) extends EqualityLike
-  case class Gt(lhs: SqlExpr,rhs: SqlExpr) extends EqualityLike
-  case class LsEq(lhs: SqlExpr,rhs: SqlExpr) extends EqualityLike
-  case class GtEq(lhs: SqlExpr,rhs: SqlExpr) extends EqualityLike
+
+  case class Neq(lhs: SqlExpr, rhs: SqlExpr) extends EqualityLike
+
+  case class Ls(lhs: SqlExpr, rhs: SqlExpr) extends EqualityLike
+
+  case class Gt(lhs: SqlExpr, rhs: SqlExpr) extends EqualityLike
+
+  case class LsEq(lhs: SqlExpr, rhs: SqlExpr) extends EqualityLike
+
+  case class GtEq(lhs: SqlExpr, rhs: SqlExpr) extends EqualityLike
 
 
-  case class StarExpr() extends SqlExpr
+  //case class StarExpr() extends SqlProj
 
 
   trait SqlProj extends Node
@@ -40,18 +47,35 @@ object AST {
 
   case class StarProj() extends SqlProj
 
-  case class FiledProj(table:String,column:String,alias:String) extends SqlProj
-  case class Projection(sqlProj: SqlProj,alias:Option[String]) extends SqlProj
+  // case class FiledProj(table:String,column:String,alias:String) extends SqlProj
+  case class Projection(sqlProj: SqlProj, alias: Option[String]) extends SqlProj
 
   case class CountStar() extends SqlAgg
 
   case class CountExpr(expr: SqlProj, distinct: Boolean) extends SqlAgg
 
   case class Sum(expr: SqlProj, distinct: Boolean) extends SqlAgg
+
   case class Avg(expr: SqlProj, distinct: Boolean) extends SqlAgg
+
   case class Min(expr: SqlProj) extends SqlAgg
+
   case class Max(expr: SqlProj) extends SqlAgg
 
+  case class SelectStmt(projections: Seq[SqlProj],
+                        relations: SqlRelation,
+                        where: Option[SqlExpr],
+                        groupBy: Option[SqlGroupBy],
+                        orderBy: Option[SqlOrderBy],
+                        limit: Option[Int]) extends Node
+
+  trait SqlRelation extends Node
+
+  case class TableRelationAST(name: String, alias: Option[String]) extends SqlRelation
+
+  case class SqlGroupBy() extends Node
+
+  case class SqlOrderBy() extends Node
 
   /*trait SqlExpr[+T] {
     def eval: T
