@@ -21,10 +21,11 @@ object Engine {
   implicit class dbTable(table: Table) {
     def from(relations: SqlRelation) = table
 
+
     def groupby(groupBy: Option[SqlGroupBy]) = {
       groupBy match {
         case None => Seq(table)
-        case _ => ??? //TODO
+        case Some(exp:SqlGroupBy) => evalGroupBy(table,exp)
       }
     }
 
@@ -38,7 +39,9 @@ object Engine {
       }
     }
 
-    def aggregate = tables
+    def aggre(projections: Seq[SqlProj]):Seq[Table] ={???
+      //tables.map(evalAggregate(_,projections))
+    }
 
     def select(projections: Seq[SqlProj]): Table = {
       tables.map(evalSelect(_, projections)) reduce (_ ++ _)
@@ -56,7 +59,7 @@ object Engine {
 
   def execute(table: Table, sql: SelectStmt): Table = {
     sql match {
-      case SelectStmt( s , f , w , g ,o ,l) => table from f groupby g where w select s
+      case SelectStmt( s , f , w , g ,o ,l) => table from f groupby g aggre s where w select s
     }
   }
 
@@ -101,15 +104,25 @@ object Engine {
   }
 
   def selectEachRow(row: Row, expr: Seq[SqlProj]): Row = {
-    //(expr map (e => row collect (satisfy(e)))).reduce(_ ++ _)
     val result = expr map (e => row collect (satisfy(e)))
-    //println(result)
     result.reduce(_ ++ _)
   }
 
   def evalSelect(input: Table, expr: Seq[SqlProj]): Table = {
     input map (selectEachRow(_, expr))
   }
+
+  def evalAggregateFunction(input:Table,expr:Seq[SqlProj] ):Table = {
+    ???
+  }
+
+  /*def evalOneAggregateFuntion(input:Table,function:SqlAgg) : Row= {
+    function match {
+      case Max(e:FieldIdent)=>  input.maxBy(row=>row(e.name))( f(input(0).get(e.name)) ).filter(_._1!=e.name)
+      case Min(e:FieldIdent)=>  input.minBy(row=>row(e.name)).filter(_._1!=e.name)
+      //case Sum(e:FieldIdent)=>  input.(row(e.name)).filter(_._1!=e.name)
+    }
+  }*/
 
 
   def evalWhereEachRow(row: Row, expr: SqlExpr): Boolean = {
@@ -184,6 +197,13 @@ object Engine {
       case (expr: LsEq) => evalEqualityLike(expr, lsEq)
       case (expr: GtEq) => evalEqualityLike(expr, gtEq)
     }
+  }
+
+  def evalGroupBy(table: Table, groupby: SqlGroupBy):Seq[Table] = {
+    val keys:Seq[String] = groupby.keys map{
+      case x:FieldIdent => x.name
+    }
+    table.groupBy(row=>keys.map(row(_))).map(_._2).toSeq
   }
 
 }

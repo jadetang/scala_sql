@@ -73,7 +73,7 @@ object AST {
 
   case class TableRelationAST(name: String, alias: Option[String]) extends SqlRelation
 
-  case class SqlGroupBy(keys:Seq[FieldIdent]) extends Node
+  case class SqlGroupBy(keys:Seq[SqlProj]) extends Node
 
   case class SqlOrderBy() extends Node
 

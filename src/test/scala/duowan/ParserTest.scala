@@ -108,6 +108,8 @@ class ParserTest extends org.specs2.mutable.Specification {
       sql.isInstanceOf[Seq[SqlProj]] should beTrue
     }
 
+
+
   }
 
 

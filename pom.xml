@@ -9,13 +9,13 @@
         <scala.version>2.10.4</scala.version>
     </properties>
 
-    <!--<repositories>
+    <repositories>
       <repository>
         <id>scala-tools.org</id>
         <name>Scala-Tools Maven2 Repository</name>
         <url>http://scala-tools.org/repo-releases</url>
       </repository>
-    </repositories>-->
+    </repositories>
 
     <pluginRepositories>
         <pluginRepository>

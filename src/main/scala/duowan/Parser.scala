@@ -25,13 +25,13 @@ object Parser extends StandardTokenParsers {
      }*/
 
     override def token: Parser[Token] =
-      (identChar ~ rep(identChar | digit) ^^ { case first ~ rest => processIdent(first :: rest mkString "")}
+      (identChar ~ rep(identChar | digit) ^^ { case first ~ rest => processIdent(first :: rest mkString "") }
         | rep1(digit) ~ opt('.' ~> rep(digit)) ^^ {
         case i ~ None => NumericLit(i mkString "")
         case i ~ Some(d) => FloatLit(i.mkString("") + "." + d.mkString(""))
       }
-        | '\'' ~ rep(chrExcept('\'', '\n', EofCh)) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "")}
-        | '\"' ~ rep(chrExcept('\"', '\n', EofCh)) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "")}
+        | '\'' ~ rep(chrExcept('\'', '\n', EofCh)) ~ '\'' ^^ { case '\'' ~ chars ~ '\'' => StringLit(chars mkString "") }
+        | '\"' ~ rep(chrExcept('\"', '\n', EofCh)) ~ '\"' ^^ { case '\"' ~ chars ~ '\"' => StringLit(chars mkString "") }
         | EofCh ^^^ EOF
         | '\'' ~> failure("unclosed string literal")
         | '\"' ~> failure("unclosed string literal")
@@ -73,16 +73,13 @@ object Parser extends StandardTokenParsers {
     )
 
 
-
-
-
   def floatLit: Parser[String] =
     elem("decimal", x => x.isInstanceOf[lexical.FloatLit]) ^^ (_.chars)
 
   def literal: Parser[SqlExpr] = {
-    numericLit ^^ { case i => Literal(i.toInt)} |
-      stringLit ^^ { case s => Literal(s.toString)} |
-      floatLit ^^ { case f => Literal(f.toDouble)} |
+    numericLit ^^ { case i => Literal(i.toInt) } |
+      stringLit ^^ { case s => Literal(s.toString) } |
+      floatLit ^^ { case f => Literal(f.toDouble) } |
       "null" ^^ (_ => Literal(null))
   }
 
@@ -111,14 +108,14 @@ object Parser extends StandardTokenParsers {
   }
 
   def andExpr: Parser[SqlExpr] =
-    primaryWhereExpr * ("and" ^^^ { (a: SqlExpr, b: SqlExpr) => And(a, b)})
+    primaryWhereExpr * ("and" ^^^ { (a: SqlExpr, b: SqlExpr) => And(a, b) })
 
   def orExpr: Parser[SqlExpr] =
-    andExpr * ("or" ^^^ { (a: SqlExpr, b: SqlExpr) => Or(a, b)})
+    andExpr * ("or" ^^^ { (a: SqlExpr, b: SqlExpr) => Or(a, b) })
 
   def expr: Parser[SqlExpr] = orExpr
 
-  def whereExpr: Parser[SqlExpr] = "where"~>expr
+  def whereExpr: Parser[SqlExpr] = "where" ~> expr
 
   def projectionStatements: Parser[Seq[SqlProj]] = repsep(projection, ",")
 
@@ -129,9 +126,9 @@ object Parser extends StandardTokenParsers {
       }
 
   def selectLiteral: Parser[SqlProj] = {
-    numericLit ^^ { case i => Literal(i.toInt)} |
-      stringLit ^^ { case s => Literal(s.toString)} |
-      floatLit ^^ { case f => Literal(f.toDouble)} |
+    numericLit ^^ { case i => Literal(i.toInt) } |
+      stringLit ^^ { case s => Literal(s.toString) } |
+      floatLit ^^ { case f => Literal(f.toDouble) } |
       "null" ^^ (_ => Literal(null))
   }
 
@@ -151,31 +148,34 @@ object Parser extends StandardTokenParsers {
     def singeSelectExpr: Parser[SqlProj] = {
       selectLiteral | selectIdent
     }
-    "count" ~> "(" ~> ("*" ^^ (_ => CountStar()) | opt("distinct") ~ singeSelectExpr ^^ { case d ~ e => CountExpr(e, d.isDefined)}) <~ ")" |
+    "count" ~> "(" ~> ("*" ^^ (_ => CountStar()) | opt("distinct") ~ singeSelectExpr ^^ { case d ~ e => CountExpr(e, d.isDefined) }) <~ ")" |
       "min" ~> "(" ~> singeSelectExpr <~ ")" ^^ (Min(_)) |
       "max" ~> "(" ~> singeSelectExpr <~ ")" ^^ (Max(_)) |
-      "sum" ~> "(" ~> (opt("distinct") ~ singeSelectExpr) <~ ")" ^^ { case d ~ e => Sum(e, d.isDefined)} |
-      "avg" ~> "(" ~> (opt("distinct") ~ singeSelectExpr) <~ ")" ^^ { case d ~ e => Avg(e, d.isDefined)}
+      "sum" ~> "(" ~> (opt("distinct") ~ singeSelectExpr) <~ ")" ^^ { case d ~ e => Sum(e, d.isDefined) } |
+      "avg" ~> "(" ~> (opt("distinct") ~ singeSelectExpr) <~ ")" ^^ { case d ~ e => Avg(e, d.isDefined) }
   }
 
   //todo
-  def select:Parser[SelectStmt] = "select" ~> projectionStatements ~ fromStatements~opt(whereExpr) ^^ {
-    case p ~ f ~ w => SelectStmt(p,f,w,None,None,None)
+  def select: Parser[SelectStmt] = "select" ~> projectionStatements ~ fromStatements ~ opt(groupStatements) ~ opt(whereExpr) ~ opt(";") ^^ {
+    case p ~ f ~ g ~ w ~l => SelectStmt(p, f, w, g, None, None)
   }
 
-  def fromStatements:Parser[SqlRelation] = "from" ~> relations
+  def fromStatements: Parser[SqlRelation] = "from" ~> relations
 
   def parse(sql: String): Option[SelectStmt] = phrase(select)(new lexical.Scanner(sql)) match {
     case Success(r, q) => Option(r)
     case x => throw new IllegalArgumentException(x.toString);
   }
 
-  def relations:Parser[SqlRelation] = simple_relation
+  def relations: Parser[SqlRelation] = simple_relation
 
-  def simple_relation: Parser[SqlRelation] =ident ~ opt("as") ~ opt(ident) ^^ {
+  def simple_relation: Parser[SqlRelation] = ident ~ opt("as") ~ opt(ident) ^^ {
     case ident ~ _ ~ alias => TableRelationAST(ident, alias)
   }
 
+  def groupStatements: Parser[SqlGroupBy] = "group" ~> "by" ~> rep1sep(selectIdent, ",") ^^ {
+    case keys => SqlGroupBy(keys)
+  }
 
 
 }

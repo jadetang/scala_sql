@@ -22,11 +22,11 @@ class EngineTest extends org.specs2.mutable.Specification {
   val name = FieldIdent(null, "name")
   val sex = FieldIdent(null, "sex")
   val age = FieldIdent(null, "age")
-//  val star = StarExpr()
+  //  val star = StarExpr()
 
-  "check everything must be ok" should {
+  "check everything must be ok" in {
     printTable(user)
-    assert(true)
+    true should beTrue
   }
 
   " 1 = 1 always be true" in {
@@ -86,25 +86,25 @@ class EngineTest extends org.specs2.mutable.Specification {
   }
 
   " age < 30 should return non empty set" in {
-    val ageLs30 = Ls(age,Literal(30))
-    printTable(evalWhere(user,ageLs30))
+    val ageLs30 = Ls(age, Literal(30))
+    printTable(evalWhere(user, ageLs30))
     evalWhere(user, ageLs30).size must be_>(1)
   }
 
   " age> 29 should return one set " in {
-    val ageGt29 = Gt(age,Literal(29))
-    evalWhere(user,ageGt29).size mustEqual 1
+    val ageGt29 = Gt(age, Literal(29))
+    evalWhere(user, ageGt29).size mustEqual 1
   }
 
   " age >=30 should return one set" in {
-    val ageGtEq30 = GtEq(age,Literal(30))
-    evalWhere(user,ageGtEq30).size mustEqual 1
+    val ageGtEq30 = GtEq(age, Literal(30))
+    evalWhere(user, ageGtEq30).size mustEqual 1
   }
 
   " name <='tsc' should return non empty set" in {
-    val nameLsEqTsc = LsEq(name,Literal("tsc"))
-    printTable(evalWhere(user,nameLsEqTsc))
-    evalWhere(user,nameLsEqTsc).size must be_>(1)
+    val nameLsEqTsc = LsEq(name, Literal("tsc"))
+    printTable(evalWhere(user, nameLsEqTsc))
+    evalWhere(user, nameLsEqTsc).size must be_>(1)
   }
 
 
@@ -112,8 +112,8 @@ class EngineTest extends org.specs2.mutable.Specification {
     val str = """ where user.name = 'tsc' and (user.age = 19 or age = 30) """
     val result = whereExpr(new lexical.Scanner(str))
     val sql = result.get
-    printTable(evalWhere(user,sql))
-    evalWhere(user,sql).size  must be_>(1)
+    printTable(evalWhere(user, sql))
+    evalWhere(user, sql).size must be_>(1)
   }
 
 
@@ -121,8 +121,8 @@ class EngineTest extends org.specs2.mutable.Specification {
     val str = """ where user.name = user.name """
     val result = whereExpr(new lexical.Scanner(str))
     val sql = result.get
-    printTable(evalWhere(user,sql))
-    evalWhere(user,sql).size  must beEqualTo(user.size)
+    printTable(evalWhere(user, sql))
+    evalWhere(user, sql).size must beEqualTo(user.size)
   }
 
   "eval select" >> {
@@ -133,30 +133,40 @@ class EngineTest extends org.specs2.mutable.Specification {
     }
 
 
-    "select name as n from user "in {
+    "select name as n from user " in {
       val str = """ select name as n, age as a,sex as m, "20" as twenty, "man" as mx from user"""
-     // val result = projectionStatements(new lexical.Scanner(str))
-     // val sql = result.get
-      printTable(query(user,str))
-      query(user,str).size must be_>(0)
+      // val result = projectionStatements(new lexical.Scanner(str))
+      // val sql = result.get
+      printTable(query(user, str))
+      query(user, str).size must be_>(0)
     }
 
     "select name from user where sex = 'male' " in {
       val str = """ select *, "图灵" as greatman from user where sex = 'male'  and (age >2 or name = 'tsc' ) """
-      printTable(query(user,str))
-      query(user,str).size must be_>(0)
+      printTable(query(user, str))
+      query(user, str).size must be_>(0)
     }
-
-
+  }
+  "group">> {
+    "eval group by in " in {
+      val str = """select name, age from user where sex = 'male' group by name,age;"""
+      println("~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+      printTable(query(user, str))
+      println("~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+      query(user, str).size must be_>(0)
+    }
   }
 
 
 
- /* "select age from user" in {
-    printTable(evalSelect(user,age))
-    true must beTrue
-  }*/
 
+
+
+
+  /* "select age from user" in {
+     printTable(evalSelect(user,age))
+     true must beTrue
+   }*/
 
 
 }
