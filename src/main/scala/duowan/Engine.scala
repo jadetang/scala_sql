@@ -25,7 +25,7 @@ object Engine {
     def groupby(groupBy: Option[SqlGroupBy]) = {
       groupBy match {
         case None => Seq(table)
-        case Some(exp:SqlGroupBy) => evalGroupBy(table,exp)
+        case Some(exp: SqlGroupBy) => evalGroupBy(table, exp)
       }
     }
 
@@ -39,8 +39,8 @@ object Engine {
       }
     }
 
-    def aggre(projections: Seq[SqlProj]):Seq[Table] ={???
-      //tables.map(evalAggregate(_,projections))
+    def aggre(projections: Seq[SqlProj]): Seq[Table] = {
+       tables.map(evalAggregateFunction(_,projections))
     }
 
     def select(projections: Seq[SqlProj]): Table = {
@@ -59,7 +59,7 @@ object Engine {
 
   def execute(table: Table, sql: SelectStmt): Table = {
     sql match {
-      case SelectStmt( s , f , w , g ,o ,l) => table from f groupby g aggre s where w select s
+      case SelectStmt(s, f, w, g, o, l) => table from f groupby g aggre s where w select s
     }
   }
 
@@ -92,6 +92,7 @@ object Engine {
               case (_1, _2) => (alias, l.value)
             }
           }
+          case _ => { case(_1,_2) => (_1,_2)}
         }
       }
       /*case (FieldIdent(qualify, name)) => {
@@ -112,17 +113,44 @@ object Engine {
     input map (selectEachRow(_, expr))
   }
 
-  def evalAggregateFunction(input:Table,expr:Seq[SqlProj] ):Table = {
-    ???
+  def evalAggregateFunction(input: Table, expr: Seq[SqlProj]): Table = {
+    val result = expr.filter(!_.isInstanceOf[StarProj]) map{
+      case Projection(e,_)=> e match {
+        case e: SqlAgg => evalOneAggregateFucntion(input, e)
+        case e: FieldIdent => input.head collect {
+          case (e.name, _2) => (e.name, _2)
+        }
+      }
+    }
+    val x = result.flatten.toMap
+    List(x)
   }
 
-  /*def evalOneAggregateFuntion(input:Table,function:SqlAgg) : Row= {
+  def evalOneAggregateFucntion(input: Table, function: SqlAgg): Row = {
+    def myOrder(key: String) = {
+      x: Map[String, Any] =>
+        x(key) match {
+          case i: Int => (i, "", 0.0)
+          case s: String => (0, s, 0.0)
+          case d: Double => (0, "", d)
+        }
+    }
     function match {
-      case Max(e:FieldIdent)=>  input.maxBy(row=>row(e.name))( f(input(0).get(e.name)) ).filter(_._1!=e.name)
-      case Min(e:FieldIdent)=>  input.minBy(row=>row(e.name)).filter(_._1!=e.name)
+      case Max(e: FieldIdent) => {
+        input.maxBy(myOrder(e.name)).collect {
+          case (e.name, _2) => ("max("+e.name+")", _2)
+        }
+      }
+      case Min(e: FieldIdent) => {
+        input.minBy(myOrder(e.name)).collect {
+          case (e.name, _2) => ("min("+e.name+")", _2)
+        }
+      }
+      //input.maxBy(row=>row(e.name))( f(input(0).get(e.name)) ).filter(_._1!=e.name)
+      //case Min(e:FieldIdent)=>  input.minBy(row=>row(e.name)).filter(_._1!=e.name)
       //case Sum(e:FieldIdent)=>  input.(row(e.name)).filter(_._1!=e.name)
     }
-  }*/
+  }
 
 
   def evalWhereEachRow(row: Row, expr: SqlExpr): Boolean = {
@@ -199,11 +227,11 @@ object Engine {
     }
   }
 
-  def evalGroupBy(table: Table, groupby: SqlGroupBy):Seq[Table] = {
-    val keys:Seq[String] = groupby.keys map{
-      case x:FieldIdent => x.name
+  def evalGroupBy(table: Table, groupby: SqlGroupBy): Seq[Table] = {
+    val keys: Seq[String] = groupby.keys map {
+      case x: FieldIdent => x.name
     }
-    table.groupBy(row=>keys.map(row(_))).map(_._2).toSeq
+    table.groupBy(row => keys.map(row(_))).map(_._2).toSeq
   }
 
 }
