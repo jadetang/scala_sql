@@ -1,5 +1,7 @@
 package duowan
 
+import duowan.MetaData.MetaData
+
 
 object AST {
 
@@ -14,7 +16,7 @@ object AST {
     val rhs: SqlExpr
   }
 
-  case class Literal(value: Any) extends SqlExpr with SqlProj
+  case class Literal(value: MetaData[_]) extends SqlExpr with SqlProj
 
   case class FieldIdent(qualify: Option[String], name: String) extends SqlExpr with SqlProj
 

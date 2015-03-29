@@ -80,6 +80,13 @@ class EngineJunitTest {
     printTable(query(user,sql))
   }
 
+  @Test
+  def ls = {
+    val sql = """ select max(age),* from user group by name  where  age<100 """
+    printTable(query(user,sql))
+    Assert.assertEquals(4,query(user,sql).size)
+  }
+
   //@Test
 
 }

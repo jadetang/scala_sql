@@ -10,37 +10,41 @@ package duowan
 
 
 object Engine {
-  type Row = Map[String, Any]
-  type Table = List[Row]
-  type Schema = Map[String, Table]
-  type DataBase = Map[String, Schema]
 
 
   import duowan.AST._
+  import duowan.MetaData._
 
   implicit class dbTable(table: Table) {
     def from(relations: SqlRelation) = table
 
 
-    def groupby(groupBy: Option[SqlGroupBy]) = {
+    def groupby(groupBy: Option[SqlGroupBy]): Seq[Table] = {
+
       groupBy match {
         case None => Seq(table)
         case Some(exp: SqlGroupBy) => evalGroupBy(table, exp)
       }
     }
 
-  }
-
-  implicit class groupByMidTable(tables: Seq[Table]) {
-    def where(where: Option[SqlExpr]): Seq[Table] = {
+    def where(where: Option[SqlExpr]): Table = {
       where match {
-        case None => tables
-        case Some(x: SqlExpr) => tables map (evalWhere(_, x))
+        case None => table
+        case Some(x: SqlExpr) => table filter (evalWhereEachRow(_, x))
       }
     }
 
+  }
+
+  implicit class groupByMidTable(tables: Seq[Table]) {
+
+
     def aggre(projections: Seq[Projection]): Seq[Table] = {
       tables.map(evalAggregateFunction(_, projections))
+      /*tables match {
+        case t :: Nil =>Seq(evalAggregateFunctionWithGroupBy(t, projections))
+        case _ =>tables.map(evalAggregateFunction(_, projections))
+      }*/
     }
 
     def select(projections: Seq[Projection]): Table = {
@@ -59,17 +63,18 @@ object Engine {
 
   def execute(table: Table, sql: SelectStmt): Table = {
     sql match {
-      case SelectStmt(s, f, w, g, o, l) => table from f groupby g aggre s where w select s
+      case SelectStmt(s, f, w, g, o, l) => table from f where w groupby g aggre s select s
     }
   }
 
 
-  def evalWhere(input: Table, expr: SqlExpr): Table = {
-    input filter (evalWhereEachRow(_, expr))
-  }
+  /* def evalWhere(input: Table, expr: SqlExpr): Table = {
+    // println(input)
+     input filter (evalWhereEachRow(_, expr))
+   }*/
 
 
-  def satisfy(expr: Projection): PartialFunction[(String, Any), (String, Any)] = {
+  def satisfy(expr: Projection): PartialFunction[(String, MetaData[_]), (String, MetaData[_])] = {
     (expr.sqlProj, expr.alias) match {
       case (StarProj(), _) => {
         case (_1, _2) => (_1, _2)
@@ -111,7 +116,7 @@ object Engine {
         case e: SqlAgg => {
           alias match {
             case None => evalOneAggregateFucntion(input, e)
-            case Some(alias: String) => Map[String, Any](alias -> evalOneAggregateFucntion(input, e).map(_._2).head)
+            case Some(alias: String) => Map[String, MetaData[_]](alias -> evalOneAggregateFucntion(input, e).map(_._2).head)
           }
         }
         case e: FieldIdent => input.head collect {
@@ -121,36 +126,25 @@ object Engine {
       }
     }
     List(result.flatten.toMap)
-    // List(x)
   }
 
+
+
   def evalOneAggregateFucntion(input: Table, function: SqlAgg): Row = {
-    def myOrder(key: String) = {
-      x: Map[String, Any] =>
-        x(key) match {
-          case i: Int => (i, "", 0.0)
-          case s: String => (0, s, 0.0)
-          case d: Double => (0, "", d)
-        }
-    }
-    def sum(list: List[Any]): Any = {
-      list match {
-        case l: List[Int] => l.sum
-        case l: List[Double] => l.sum
-      }
-    }
     function match {
       case Max(e: FieldIdent) => {
-        input.maxBy(myOrder(e.name)).collect {
+        val tuple = input.maxBy(row => row(e.name)).collect {
           case (e.name, _2) => ("max(" + e.name + ")", _2)
-        }
+        }.head
+        Map(tuple._1 -> tuple._2)
       }
       case Max(e: Literal) => Map("max(" + e.value + ")" -> e.value)
       case Min(e: Literal) => Map("min(" + e.value + ")" -> e.value)
       case Min(e: FieldIdent) => {
-        input.minBy(myOrder(e.name)).collect {
+        val tuple = input.minBy(row => row(e.name)).collect {
           case (e.name, _2) => ("min(" + e.name + ")", _2)
-        }
+        }.head
+        Map(tuple._1 -> tuple._2)
       }
       case CountStar() => {
         Map("count(*)" -> input.size)
@@ -173,22 +167,20 @@ object Engine {
       }
       case Sum(e: FieldIdent, distinct: Boolean) => {
         if (distinct) {
-          val valueSet = (input map (row => row(e.name))).toSet.toList
-          Map("sum(distinct " + e.name + ")" -> sum(valueSet))
+          val sum = (input map (row => row(e.name))).toSet.sum
+          Map("sum(distinct " + e.name + ")" -> sum)
         } else {
-          val valueBag = (input map (row => row(e.name)))
-          Map("sum(" + e.name + ")" -> sum(valueBag))
+          val sum = (input map (row => row(e.name))).sum
+          Map("sum(" + e.name + ")" -> sum)
         }
       }
       case Sum(e: Literal, distinct: Boolean) => {
         if (distinct) {
           Map("sum(distinct " + e.value + ")" -> 1)
         } else {
-          val value = e.value
-          value match {
-            case e: Int => Map("sum(" + e + ")" -> e * input.size)
-            case e: Double => Map("sum(" + e + ")" -> e * input.size)
-            case _ => Map("sum(" + e + ")" -> input.size)
+          e.value match {
+            case e: MetaInt => Map("sum(" + e + ")" -> e.value * input.size)
+            case e: MetaDouble => Map("sum(" + e + ")" -> e.value * input.size)
           }
         }
       }
@@ -200,87 +192,52 @@ object Engine {
         }
       }
       case Avg(e: FieldIdent, distinct: Boolean) => {
+
         if (distinct) {
-          val valueSet = (input map (row => row(e.name))).toSet.toList
-          sum(valueSet) match {
-            case sum: Double => Map("avg(distinct " + e.name + ")" -> sum / input.size)
-            case sum: Int => Map("avg(distinct " + e.name + ")" -> sum / input.size)
+          val sum = (input map (row => row(e.name))).toSet.toList.sum
+          sum match {
+            case s: MetaDouble => Map("avg( distinct" + e.name + ")" -> s.value / input.size)
+            case s: MetaInt => Map("avg( distinct" + e.name + ")" -> s.value / input.size)
           }
         } else {
-          val valueList = (input map (row => row(e.name))).toList
-          sum(valueList) match {
-            case sum: Double => Map("avg(" + e.name + ")" -> sum / input.size)
-            case sum: Int => Map("avg(" + e.name + ")" -> sum / input.size)
+          val sum = (input map (row => row(e.name))).toList.sum
+          sum match {
+            case s: MetaDouble => Map("avg(" + e.name + ")" -> s.value / input.size)
+            case s: MetaInt => Map("avg(" + e.name + ")" -> s.value / input.size)
           }
         }
       }
-
-      //input.maxBy(row=>row(e.name))( f(input(0).get(e.name)) ).filter(_._1!=e.name)
-      //case Min(e:FieldIdent)=>  input.minBy(row=>row(e.name)).filter(_._1!=e.name)
-      //case Sum(e:FieldIdent)=>  input.(row(e.name)).filter(_._1!=e.name)
     }
   }
 
-
   def evalWhereEachRow(row: Row, expr: SqlExpr): Boolean = {
 
-    def eq(a: Any, b: Any): Boolean = a == b
+    def eq(a: MetaData[_], b: MetaData[_]): Boolean = a == b
     def neq(a: Any, b: Any): Boolean = a != b
 
-    def ls(a: Any, b: Any): Boolean = {
-      if (a.getClass == b.getClass) {
-        a match {
-          case (a: Comparable[Any]) => (a compareTo b) < 0
-          case _ => false
-        }
-      } else {
-        false
-      }
-    }
+    def ls(a: MetaData[_], b: MetaData[_])(implicit ev1: MetaData[_] => Ordered[MetaData[_]]): Boolean
+    = a < b
 
-    def gt(a: Any, b: Any): Boolean = {
-      if (a.getClass == b.getClass) {
-        a match {
-          case (a: Comparable[Any]) => (a compareTo b) > 0
-          case _ => false
-        }
-      } else {
-        false
-      }
-    }
 
-    def lsEq(a: Any, b: Any): Boolean = {
-      if (a.getClass == b.getClass) {
-        a match {
-          case (a: Comparable[Any]) => (a compareTo b) <= 0
-          case _ => false
-        }
-      } else {
-        false
-      }
-    }
+    def gt(a: MetaData[_], b: MetaData[_])(implicit ev1: MetaData[_] => Ordered[MetaData[_]]): Boolean
+    = a > b
 
-    def gtEq(a: Any, b: Any): Boolean = {
-      if (a.getClass == b.getClass) {
-        a match {
-          case (a: Comparable[Any]) => (a compareTo b) >= 0
-          case _ => false
-        }
-      } else {
-        false
-      }
-    }
+    def lsEq(a: MetaData[_], b: MetaData[_])(implicit ev1: MetaData[_] => Ordered[MetaData[_]]): Boolean
+    = a >= b
+
+    def gtEq(a: MetaData[_], b: MetaData[_])(implicit ev1: MetaData[_] => Ordered[MetaData[_]]): Boolean
+    = a >= b
 
 
 
-    def evalEqualityLike(sqlExpr: EqualityLike, f: (Any, Any) => Boolean) = {
+    def evalEqualityLike(sqlExpr: EqualityLike, f: (MetaData[_], MetaData[_]) => Boolean) = {
       (sqlExpr.lhs, sqlExpr.rhs) match {
         case (left: Literal, right: Literal) => f(left.value, right.value)
         case (left: FieldIdent, right: Literal) => row.get(left.name) match {
           case Some(s) => f(s, right.value)
           case None => false
         }
-        case (left: FieldIdent, right: FieldIdent) => f(row.get(left.name), row.get(right.name))
+        case (left: FieldIdent, right: FieldIdent) => f(row(left.name), row(right.name))
       }
     }
 
