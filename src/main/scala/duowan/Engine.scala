@@ -39,11 +39,11 @@ object Engine {
       }
     }
 
-    def aggre(projections: Seq[SqlProj]): Seq[Table] = {
-       tables.map(evalAggregateFunction(_,projections))
+    def aggre(projections: Seq[Projection]): Seq[Table] = {
+      tables.map(evalAggregateFunction(_, projections))
     }
 
-    def select(projections: Seq[SqlProj]): Table = {
+    def select(projections: Seq[Projection]): Table = {
       tables.map(evalSelect(_, projections)) reduce (_ ++ _)
     }
 
@@ -69,61 +69,59 @@ object Engine {
   }
 
 
-  def satisfy(expr: SqlProj): PartialFunction[(String, Any), (String, Any)] = {
-    expr match {
-      case StarProj() => {
+  def satisfy(expr: Projection): PartialFunction[(String, Any), (String, Any)] = {
+    (expr.sqlProj, expr.alias) match {
+      case (StarProj(), _) => {
         case (_1, _2) => (_1, _2)
       }
-      case Projection(sqlProj, alias) => {
-        sqlProj match {
-          case (f: FieldIdent) => alias match {
-            case None => {
-              case (f.name, _2) => (f.name, _2)
-            }
-            case Some(alias: String) => {
-              case (f.name, _2) => (alias, _2)
-            }
-          }
-          case (l: Literal) => alias match {
-            case None => {
-              case (_1, _2) => (l.value.toString, l.value)
-            }
-            case Some(alias: String) => {
-              case (_1, _2) => (alias, l.value)
-            }
-          }
-          case _ => { case(_1,_2) => (_1,_2)}
+      case (f: FieldIdent, alias) => alias match {
+        case None => {
+          case (f.name, _2) => (f.name, _2)
+        }
+        case Some(alias: String) => {
+          case (f.name, _2) => (alias, _2)
         }
       }
-      /*case (FieldIdent(qualify, name)) => {
-        qualify match {
-          case None =>{case (name, _2) => (name, _2)}
-          case Some(b: )
+      case (l: Literal, alias) => alias match {
+        case None => {
+          case (_1, _2) => (l.value.toString, l.value)
         }
-      }*/
+        case Some(alias: String) => {
+          case (_1, _2) => (alias, l.value)
+        }
+      }
+      case (l: SqlAgg, alias) => {
+        case (_1, _2) => (_1, _2)
+      }
     }
   }
 
-  def selectEachRow(row: Row, expr: Seq[SqlProj]): Row = {
+  def selectEachRow(row: Row, expr: Seq[Projection]): Row = {
     val result = expr map (e => row collect (satisfy(e)))
     result.reduce(_ ++ _)
   }
 
-  def evalSelect(input: Table, expr: Seq[SqlProj]): Table = {
+  def evalSelect(input: Table, expr: Seq[Projection]): Table = {
     input map (selectEachRow(_, expr))
   }
 
-  def evalAggregateFunction(input: Table, expr: Seq[SqlProj]): Table = {
-    val result = expr.filter(!_.isInstanceOf[StarProj]) map{
-      case Projection(e,_)=> e match {
-        case e: SqlAgg => evalOneAggregateFucntion(input, e)
+  def evalAggregateFunction(input: Table, expr: Seq[Projection]): Table = {
+    val result = expr map {
+      case Projection(e, alias) => e match {
+        case e: SqlAgg => {
+          alias match {
+            case None => evalOneAggregateFucntion(input, e)
+            case Some(alias: String) => Map[String, Any](alias -> evalOneAggregateFucntion(input, e).map(_._2).head)
+          }
+        }
         case e: FieldIdent => input.head collect {
           case (e.name, _2) => (e.name, _2)
         }
+        case e: StarProj => input.head
       }
     }
-    val x = result.flatten.toMap
-    List(x)
+    List(result.flatten.toMap)
+    // List(x)
   }
 
   def evalOneAggregateFucntion(input: Table, function: SqlAgg): Row = {
@@ -135,17 +133,88 @@ object Engine {
           case d: Double => (0, "", d)
         }
     }
+    def sum(list: List[Any]): Any = {
+      list match {
+        case l: List[Int] => l.sum
+        case l: List[Double] => l.sum
+      }
+    }
     function match {
       case Max(e: FieldIdent) => {
         input.maxBy(myOrder(e.name)).collect {
-          case (e.name, _2) => ("max("+e.name+")", _2)
+          case (e.name, _2) => ("max(" + e.name + ")", _2)
         }
       }
+      case Max(e: Literal) => Map("max(" + e.value + ")" -> e.value)
+      case Min(e: Literal) => Map("min(" + e.value + ")" -> e.value)
       case Min(e: FieldIdent) => {
         input.minBy(myOrder(e.name)).collect {
-          case (e.name, _2) => ("min("+e.name+")", _2)
+          case (e.name, _2) => ("min(" + e.name + ")", _2)
         }
       }
+      case CountStar() => {
+        Map("count(*)" -> input.size)
+      }
+      case CountExpr(e: FieldIdent, distinct: Boolean) => {
+        if (distinct) {
+          val countDist = (input map (row => row(e.name)) toSet).size
+          Map("count(distinct " + e.name + ")" -> countDist)
+        } else {
+          Map("count(distinct " + e.name + ")" -> input.size)
+        }
+      }
+      case CountExpr(e: Literal, distinct: Boolean) => {
+        if (distinct) {
+          Map("count(distinct" + e.value + ")" -> 1)
+        } else {
+          Map("count(distinct" + e.value + ")" -> input.size)
+
+        }
+      }
+      case Sum(e: FieldIdent, distinct: Boolean) => {
+        if (distinct) {
+          val valueSet = (input map (row => row(e.name))).toSet.toList
+          Map("sum(distinct " + e.name + ")" -> sum(valueSet))
+        } else {
+          val valueBag = (input map (row => row(e.name)))
+          Map("sum(" + e.name + ")" -> sum(valueBag))
+        }
+      }
+      case Sum(e: Literal, distinct: Boolean) => {
+        if (distinct) {
+          Map("sum(distinct " + e.value + ")" -> 1)
+        } else {
+          val value = e.value
+          value match {
+            case e: Int => Map("sum(" + e + ")" -> e * input.size)
+            case e: Double => Map("sum(" + e + ")" -> e * input.size)
+            case _ => Map("sum(" + e + ")" -> input.size)
+          }
+        }
+      }
+      case Avg(e: Literal, distinct: Boolean) => {
+        if (distinct) {
+          Map("avg(distinct " + e.value + ")" -> e.value)
+        } else {
+          Map("avg(" + e.value + ")" -> e.value)
+        }
+      }
+      case Avg(e: FieldIdent, distinct: Boolean) => {
+        if (distinct) {
+          val valueSet = (input map (row => row(e.name))).toSet.toList
+          sum(valueSet) match {
+            case sum: Double => Map("avg(distinct " + e.name + ")" -> sum / input.size)
+            case sum: Int => Map("avg(distinct " + e.name + ")" -> sum / input.size)
+          }
+        } else {
+          val valueList = (input map (row => row(e.name))).toList
+          sum(valueList) match {
+            case sum: Double => Map("avg(" + e.name + ")" -> sum / input.size)
+            case sum: Int => Map("avg(" + e.name + ")" -> sum / input.size)
+          }
+        }
+      }
+
       //input.maxBy(row=>row(e.name))( f(input(0).get(e.name)) ).filter(_._1!=e.name)
       //case Min(e:FieldIdent)=>  input.minBy(row=>row(e.name)).filter(_._1!=e.name)
       //case Sum(e:FieldIdent)=>  input.(row(e.name)).filter(_._1!=e.name)

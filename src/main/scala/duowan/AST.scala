@@ -40,29 +40,29 @@ object AST {
   //case class StarExpr() extends SqlProj
 
 
-  trait SqlProj extends Node
+  sealed trait SqlProj extends Node
 
-  trait SqlAgg extends SqlProj
+  trait SqlAgg
 
 
   case class StarProj() extends SqlProj
 
   // case class FiledProj(table:String,column:String,alias:String) extends SqlProj
-  case class Projection(sqlProj: SqlProj, alias: Option[String]) extends SqlProj
+  case class Projection(sqlProj: SqlProj, alias: Option[String]) extends Node
 
-  case class CountStar() extends SqlAgg
+  case class CountStar() extends SqlProj with SqlAgg
 
-  case class CountExpr(expr: SqlProj, distinct: Boolean) extends SqlAgg
+  case class CountExpr(expr: SqlProj, distinct: Boolean) extends SqlProj with SqlAgg
 
-  case class Sum(expr: SqlProj, distinct: Boolean) extends SqlAgg
+  case class Sum(expr: SqlProj, distinct: Boolean) extends SqlProj with SqlAgg
 
-  case class Avg(expr: SqlProj, distinct: Boolean) extends SqlAgg
+  case class Avg(expr: SqlProj, distinct: Boolean) extends SqlProj with SqlAgg
 
-  case class Min(expr: SqlProj) extends SqlAgg
+  case class Min(expr: SqlProj) extends SqlProj with SqlAgg
 
-  case class Max(expr: SqlProj) extends SqlAgg
+  case class Max(expr: SqlProj) extends SqlProj with SqlAgg
 
-  case class SelectStmt(projections: Seq[SqlProj],
+  case class SelectStmt(projections: Seq[Projection],
                         relations: SqlRelation,
                         where: Option[SqlExpr],
                         groupBy: Option[SqlGroupBy],

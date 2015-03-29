@@ -15,8 +15,9 @@ object TestData {
   val row4 = Map("name" -> "xiaohua", "age" -> 2, "sex" -> null)
   val row5 = Map("name" -> "tsc", "age" -> 19, "sex" -> "male")
   val row6 = Map("name" -> "tsc", "age" -> 99, "sex" -> "female")
+  val row7 = Map("name" -> "tsc", "age" -> 30, "sex" -> "female")
   val wrongRow = Map("name" -> "doudou", "age" -> 3)
-  val user: Table = List(row1, row2, row3, row4, row5,row6)
+  val user: Table = List(row1, row2, row3, row4, row5,row6,row7)
 
   def printTable(table:Table) {
     println("----------------")
@@ -24,6 +25,8 @@ object TestData {
     println("----------------")
 
   }
+
+
 
 }
 

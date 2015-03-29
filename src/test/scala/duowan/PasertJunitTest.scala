@@ -20,4 +20,17 @@ class PasertJunitTest {
     println(result)
   }
 
+
+  @Test
+  def selectTest: Unit= {
+    val str = """ max(name) """
+    val result = projectionStatements(new lexical.Scanner(str))
+    //logSelect(result)
+    //log(result)
+    val sql = result.get
+    println(sql)
+   // sql.isInstanceOf[Seq[SqlProj]] should beTrue
+
+  }
+
 }
