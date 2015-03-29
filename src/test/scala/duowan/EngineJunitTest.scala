@@ -1,9 +1,9 @@
 package duowan
 
-import duowan.AST.{Min, Max, SqlGroupBy, FieldIdent}
+import duowan.AST.{FieldIdent, SqlGroupBy}
 import duowan.Engine._
 import duowan.TestData._
-import org.junit.{Before, BeforeClass, Assert, Test}
+import org.junit.{Assert, Before, Test}
 
 /**
  *
@@ -31,30 +31,52 @@ class EngineJunitTest {
   @Test
   def evalGroupWithWhere = {
     val sql = "select * from user group by user.name, user.sex where sex = 'male' "
-    Assert.assertEquals(3, query(user, sql).size)
+    printTable(query(user,sql))
+    Assert.assertEquals(2, query(user, sql).size)
   }
 
-  @Test
-  def maxAndMinFunction = {
-    val maxAge = Max(age)
-    Assert.assertEquals(99, evalOneAggregateFucntion(user, maxAge)("age"))
-    val minAge = Min(age)
-    Assert.assertEquals(1, evalOneAggregateFucntion(user, minAge)("age"))
 
-  }
-
-  @Test
-  def evalAggregateFunctionTest ={
-    val maxAge = Max(age)
-    val minAge = Min(age)
-    val name = FieldIdent(null, "name")
-    val expr = Seq(maxAge,minAge,name)
-    printTable(evalAggregateFunction(user,expr))
-  }
 
   @Test
   def testMaxWithGroupBy = {
-    val sql  = """ select max(age),min(age),* from user group by sex,name """
+    val sql  = """ select max(age) as mmmm,min(age) as yyyy,* from user group by sex,name """
+    printTable(query(user,sql))
+  }
+
+  @Test
+  def testCountStart = {
+    val sql = """ select count(*) as number,name from user group by name"""
+    printTable(query(user,sql))
+
+  }
+
+  @Test
+  def testMax5 = {
+    val sql =  """ select max(5) as m,min('a') from user"""
+    printTable(query(user,sql))
+  }
+
+  @Test
+  def countUser = {
+    val sql = """select count(user) as number,name from user group by name """
+    printTable(query(user,sql))
+  }
+
+  @Test
+  def countDistUser = {
+    val sql = """select count(distinct name)  from user"""
+    printTable(query(user,sql))
+  }
+
+  @Test
+  def sum = {
+    val sql = """ select sum(distinct age),sum(age) from user """
+    printTable(query(user,sql))
+  }
+
+  @Test
+  def avg = {
+    val sql = """select avg(age),avg(distinct age),avg(5), avg(distinct 5) from user"""
     printTable(query(user,sql))
   }
 
