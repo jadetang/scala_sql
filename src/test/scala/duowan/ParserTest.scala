@@ -1,3 +1,4 @@
+/*
 package duowan
 
 import duowan.Parser._
@@ -130,3 +131,4 @@ class ParserTest extends org.specs2.mutable.Specification {
   }
 
 }
+*/
