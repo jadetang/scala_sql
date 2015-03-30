@@ -26,6 +26,18 @@ object TestData {
 
   }
 
+  def main(args: Array[String]) {
+    //println(  (row1 map(x=>"'"+x._2+"'")).mkString("(",",",")") )
+
+    user foreach(row=>print(
+
+      (row map(x=>"'"+x._2+"'")).mkString("(",",",")")+","
+
+
+    ))
+
+  }
+
 
 
 }

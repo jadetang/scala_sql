@@ -1,6 +1,7 @@
 package duowan
 
 
+
 /**
  *
  * @author tangsicheng
@@ -34,22 +35,47 @@ object Engine {
       }
     }
 
+
+    def orderBy(orderBy: Option[SqlOrderBy]): Table = {
+      orderBy match {
+        case None => table
+        case Some(x: SqlOrderBy) => evalOrderBy(table, x.keys)
+      }
+    }
+
+    def limit(limit: Option[(Option[Int],Int)]   ):Table = {
+      limit match {
+        case None => table
+        case Some(x:(Option[Int],Int))=> x match {
+          case (None,i:Int)=>table.take(i)
+          case (Some(offset:Int),size:Int)=> table.take(offset+size).drop(offset)
+        }
+
+      }
+    }
+
   }
 
   implicit class groupByMidTable(tables: Seq[Table]) {
 
 
+    def aggreFuntion(projection: Projection): Boolean = projection.sqlProj match {
+      case e: SqlAgg => true
+      case _ => false
+    }
+
     def aggre(projections: Seq[Projection]): Seq[Table] = {
-      tables.map(evalAggregateFunction(_, projections))
-      /*tables match {
-        case t :: Nil =>Seq(evalAggregateFunctionWithGroupBy(t, projections))
-        case _ =>tables.map(evalAggregateFunction(_, projections))
-      }*/
+      if (projections exists (aggreFuntion(_))) {
+        tables.map(evalAggregateFunction(_, projections))
+      } else {
+        tables
+      }
     }
 
     def select(projections: Seq[Projection]): Table = {
       tables.map(evalSelect(_, projections)) reduce (_ ++ _)
     }
+
 
   }
 
@@ -63,16 +89,9 @@ object Engine {
 
   def execute(table: Table, sql: SelectStmt): Table = {
     sql match {
-      case SelectStmt(s, f, w, g, o, l) => table from f where w groupby g aggre s select s
+      case SelectStmt(s, f, w, g, o, l) => table from f where w groupby g aggre s select s orderBy o limit l
     }
   }
-
-
-  /* def evalWhere(input: Table, expr: SqlExpr): Table = {
-    // println(input)
-     input filter (evalWhereEachRow(_, expr))
-   }*/
-
 
   def satisfy(expr: Projection): PartialFunction[(String, MetaData[_]), (String, MetaData[_])] = {
     (expr.sqlProj, expr.alias) match {
@@ -127,7 +146,6 @@ object Engine {
     }
     List(result.flatten.toMap)
   }
-
 
 
   def evalOneAggregateFucntion(input: Table, function: SqlAgg): Row = {
@@ -259,5 +277,13 @@ object Engine {
     }
     table.groupBy(row => keys.map(row(_))).map(_._2).toSeq
   }
+
+  def evalOrderBy(table: Table, projs: Seq[SqlProj]): Table = {
+    val keys: Seq[String] = projs map {
+        case f: FieldIdent => f.name
+    }
+    table.sortBy( row=> keys.map(row(_)) )
+  }
+
 
 }

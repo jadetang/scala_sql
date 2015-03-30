@@ -21,4 +21,11 @@ class MetaDataTest {
     println(user map(_("age")) sum)
   }
 
+  @Test
+  def orderBy = {
+    printTable(user)
+    val keys = List("age","name")
+    printTable(user.sortBy(row=>keys.map(row(_))))
+  }
+
 }
