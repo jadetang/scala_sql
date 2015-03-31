@@ -1,4 +1,6 @@
-package duowan
+package github.jadetang
+
+import MetaData.MetaData
 
 
 object AST {
@@ -14,7 +16,7 @@ object AST {
     val rhs: SqlExpr
   }
 
-  case class Literal(value: Any) extends SqlExpr with SqlProj
+  case class Literal(value: MetaData[_]) extends SqlExpr with SqlProj
 
   case class FieldIdent(qualify: Option[String], name: String) extends SqlExpr with SqlProj
 
@@ -42,7 +44,7 @@ object AST {
 
   sealed trait SqlProj extends Node
 
-  trait SqlAgg
+  trait SqlAgg extends Node
 
 
   case class StarProj() extends SqlProj
@@ -67,7 +69,7 @@ object AST {
                         where: Option[SqlExpr],
                         groupBy: Option[SqlGroupBy],
                         orderBy: Option[SqlOrderBy],
-                        limit: Option[Int]) extends Node
+                        limit: Option[(Option[Int],Int)]) extends Node
 
   trait SqlRelation extends Node
 
@@ -75,7 +77,7 @@ object AST {
 
   case class SqlGroupBy(keys:Seq[SqlProj]) extends Node
 
-  case class SqlOrderBy() extends Node
+  case class SqlOrderBy(keys:Seq[SqlProj]) extends Node
 
   /*trait SqlExpr[+T] {
     def eval: T
