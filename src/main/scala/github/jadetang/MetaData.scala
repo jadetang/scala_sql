@@ -1,4 +1,4 @@
-package duowan
+package github.jadetang
 
 /**
  * Created by jadetang on 15-3-29.

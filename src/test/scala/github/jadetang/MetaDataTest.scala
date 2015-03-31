@@ -1,12 +1,12 @@
-package duowan
+package github.jadetang
 
 import org.junit.Test
 /**
  * Created by jadetang on 15-3-29.
  */
 class MetaDataTest {
-  import duowan.TestData._
-  import duowan.MetaData._
+  import TestData._
+  import MetaData._
 
   @Test
   def testMaxAndMin = {
@@ -24,7 +24,7 @@ class MetaDataTest {
   @Test
   def orderBy = {
     printTable(user)
-    val keys = List("age","name")
+    val keys = Seq("age","name")
     printTable(user.sortBy(row=>keys.map(row(_))))
   }
 

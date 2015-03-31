@@ -1,6 +1,6 @@
-package duowan
+package github.jadetang
 
-import duowan.MetaData._
+import MetaData._
 
 /**
  *

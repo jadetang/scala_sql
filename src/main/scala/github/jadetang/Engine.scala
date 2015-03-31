@@ -1,6 +1,4 @@
-package duowan
-
-
+package github.jadetang
 
 /**
  *
@@ -13,8 +11,8 @@ package duowan
 object Engine {
 
 
-  import duowan.AST._
-  import duowan.MetaData._
+  import AST._
+  import MetaData._
 
   implicit class dbTable(table: Table) {
     def from(relations: SqlRelation) = table

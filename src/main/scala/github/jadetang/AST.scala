@@ -1,6 +1,6 @@
-package duowan
+package github.jadetang
 
-import duowan.MetaData.MetaData
+import MetaData.MetaData
 
 
 object AST {

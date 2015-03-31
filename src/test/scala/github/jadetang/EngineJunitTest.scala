@@ -1,8 +1,8 @@
-package duowan
+package github.jadetang
 
-import duowan.AST.{FieldIdent, SqlGroupBy}
-import duowan.Engine._
-import duowan.TestData._
+import AST.{FieldIdent, SqlGroupBy}
+import Engine._
+import TestData._
 import org.junit.{BeforeClass, Assert, Before, Test}
 
 /**
@@ -30,7 +30,7 @@ class EngineJunitTest {
   @Test
   def evalGroupWithWhere = {
     val sql = "select * from user group by user.name, user.sex where sex = 'male' "
-    test(sql,Assert.assertEquals(2, query(user, sql).size))
+    test(sql,Assert.assertEquals(3, query(user, sql).size))
   }
 
 

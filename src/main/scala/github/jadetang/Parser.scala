@@ -1,6 +1,7 @@
-package duowan
+package github.jadetang
 
-import duowan.AST._
+import AST._
+import github.jadetang.AST._
 
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.lexical.StdLexical
