@@ -22,7 +22,6 @@ object MetaData {
       case that: MetaData[T] => that.value == value
       case _ => false
     }
-
   }
 
   implicit class MetaInt(val v: Int) extends MetaData[Int] {
@@ -37,19 +36,6 @@ object MetaData {
   implicit class MetaString(val v: String) extends MetaData[String] {
     override def value: String = v
   }
-
-  /*
-    implicit class MetaAny(val v:Any) extends MetaData[Any]{
-      override def value: Any = v
-    }*/
-  /*
-    implicit val metaOrder = new Ordering[MetaData[_]] {
-      override def compare(x: MetaData[_], y: MetaData[_]): Int = (x,y) match {
-        case(x:MetaInt,y:MetaInt) => x.value.compareTo(y.value)
-        case(x:MetaDouble,y:MetaDouble)=>x.value.compareTo(y.value)
-        case(x:MetaString,y:MetaString)=>x.value.compareTo(y.value)
-      }
-    }*/
 
   implicit val listMetaOrder = new Ordering[Seq[MetaData[_]]] {
     override def compare(x: Seq[MetaData[_]], y: Seq[MetaData[_]]): Int = {

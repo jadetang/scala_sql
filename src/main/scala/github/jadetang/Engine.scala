@@ -17,6 +17,10 @@ object Engine {
   implicit class dbTable(table: Table) {
     def from(relations: SqlRelation) = table
 
+    def select(projections: Seq[Projection]): Table = {
+      evalSelect(table, projections)
+    }
+
 
     def groupby(groupBy: Option[SqlGroupBy]): Seq[Table] = {
 
@@ -34,19 +38,12 @@ object Engine {
     }
 
 
-    def orderBy(orderBy: Option[SqlOrderBy]): Table = {
-      orderBy match {
-        case None => table
-        case Some(x: SqlOrderBy) => evalOrderBy(table, x.keys)
-      }
-    }
-
-    def limit(limit: Option[(Option[Int],Int)]   ):Table = {
+    def limit(limit: Option[(Option[Int], Int)]): Table = {
       limit match {
         case None => table
-        case Some(x:(Option[Int],Int))=> x match {
-          case (None,i:Int)=>table.take(i)
-          case (Some(offset:Int),size:Int)=> table.take(offset+size).drop(offset)
+        case Some(x: (Option[Int], Int)) => x match {
+          case (None, i: Int) => table.take(i)
+          case (Some(offset: Int), size: Int) => table.take(offset + size).drop(offset)
         }
 
       }
@@ -70,8 +67,13 @@ object Engine {
       }
     }
 
-    def select(projections: Seq[Projection]): Table = {
-      tables.map(evalSelect(_, projections)) reduce (_ ++ _)
+
+    def orderBy(orderBy: Option[SqlOrderBy]): Table = {
+      val mergeTable = tables.reduce(_ ::: _)
+      orderBy match {
+        case None => mergeTable
+        case Some(x: SqlOrderBy) => evalOrderBy(mergeTable, x.keys)
+      }
     }
 
 
@@ -87,7 +89,7 @@ object Engine {
 
   def execute(table: Table, sql: SelectStmt): Table = {
     sql match {
-      case SelectStmt(s, f, w, g, o, l) => table from f where w groupby g aggre s select s orderBy o limit l
+      case SelectStmt(s, f, w, g, o, l) => table from f where w groupby g aggre s orderBy o select s limit l
     }
   }
 
@@ -278,9 +280,9 @@ object Engine {
 
   def evalOrderBy(table: Table, projs: Seq[SqlProj]): Table = {
     val keys: Seq[String] = projs map {
-        case f: FieldIdent => f.name
+      case f: FieldIdent => f.name
     }
-    table.sortBy( row=> keys.map(row(_)) )
+    table.sortBy(row => keys.map(row(_)))
   }
 
 
