@@ -167,7 +167,7 @@ object Engine {
       }
       case CountExpr(e: FieldIdent, distinct: Boolean) => {
         if (distinct) {
-          val countDist = (input map (row => row(e.name)) toSet).size
+          val countDist = (input map (row => row(e.name)) distinct).size
           Map("count(distinct " + e.name + ")" -> countDist)
         } else {
           Map("count(distinct " + e.name + ")" -> input.size)
