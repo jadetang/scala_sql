@@ -15,7 +15,7 @@ suppose there is a List<Map> called user,which contains these data:
 ```scala
 Engine.query(user,"select count(user) as number,name from user group by name") will result in
 ```
-- [number:1,name:dudu]
-- [number:4,name:tsc]
-- [number:1,name:xiaohua]
-- [number:1,name:syy]
+[number:1,name:dudu]  
+[number:4,name:tsc]  
+[number:1,name:xiaohua]  
+[number:1,name:syy]  
