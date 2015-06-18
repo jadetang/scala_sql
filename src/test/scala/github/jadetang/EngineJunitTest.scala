@@ -1,9 +1,9 @@
 package github.jadetang
 
-import AST.{FieldIdent, SqlGroupBy}
-import Engine._
-import TestData._
-import org.junit.{BeforeClass, Assert, Before, Test}
+import github.jadetang.AST.FieldIdent
+import github.jadetang.Engine._
+import github.jadetang.TestData._
+import org.junit.{Assert, Before, Test}
 
 /**
  *
@@ -120,6 +120,19 @@ class EngineJunitTest {
     test(sql,Assert.assertEquals(5,query(user,sql).size))
     val sql2 = """ select * from user order by age limit 2,4"""
     test(sql2,Assert.assertEquals(4,query(user,sql2).size))
+  }
+
+  @Test
+  def orderByDate = {
+    val sql = """ select * from user order by birthDay"""
+    test(sql,Assert.assertEquals(7,query(user,sql).size))
+
+  }
+
+  @Test
+  def maxDate = {
+    val sql = """ select max(birthDay), min(birthDay)  from user """
+    test(sql,Assert.assertEquals(1,query(user,sql).size))
   }
 
 }
