@@ -39,7 +39,7 @@ wanna to some computation on a column.
 ```scala
 sortBy[B](f: A => B)(implicit ord: Ordering[B]): Repr = sorted(ord on f)
 ```
-to do order by, as the engine would support clause like
+to do order by, as the engine do not support clause like
 ```sql
 order by a desc, b asc
 ```
