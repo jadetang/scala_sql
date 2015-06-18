@@ -1,5 +1,7 @@
 package github.jadetang
 
+import java.util.Date
+
 /**
  * Created by jadetang on 15-3-29.
  */
@@ -38,6 +40,12 @@ object MetaData {
     override def value: String = v
   }
 
+  implicit class MetaDate(val v: Date) extends MetaData[Date] {
+    override def value: Date = v
+  }
+
+
+
   /*
     implicit class MetaAny(val v:Any) extends MetaData[Any]{
       override def value: Any = v
@@ -58,17 +66,18 @@ object MetaData {
         case (x: MetaInt, y: MetaInt) => x.value.compareTo(y.value)
         case (x: MetaDouble, y: MetaDouble) => x.value.compareTo(y.value)
         case (x: MetaString, y: MetaString) => x.value.compareTo(y.value)
+        case (x: MetaDate, y: MetaDate) => x.value.compareTo(y.value)
       }
 
       (x, y) match {
         case (x1 :: Nil, y1 :: Nil) => {
-          compareHelper(x1,y1)
+          compareHelper(x1, y1)
         }
-        case (x1::tails1,y1::tails2) => {
-          val result = compareHelper(x1,y1)
-          if(result == 0){
-            compare(tails1,tails2)
-          }else{
+        case (x1 :: tails1, y1 :: tails2) => {
+          val result = compareHelper(x1, y1)
+          if (result == 0) {
+            compare(tails1, tails2)
+          } else {
             result
           }
         }
@@ -114,6 +123,7 @@ object MetaData {
       case (x: MetaInt, y: MetaInt) => x.value.compareTo(y.value)
       case (x: MetaDouble, y: MetaDouble) => x.value.compareTo(y.value)
       case (x: MetaString, y: MetaString) => x.value.compareTo(y.value)
+      case (x: MetaDate, y: MetaDate) => x.value.compareTo(y.value)
     }
   }
 

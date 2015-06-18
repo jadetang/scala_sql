@@ -20,3 +20,27 @@ will result in：
 [number:4,name:tsc]  
 [number:1,name:xiaohua]  
 [number:1,name:syy]  
+
+#supported function and clause
+max,min,sum,count,count(distinct),avg
+order by, group by, limit
+
+#supported java/scala data type
+String,Integer,Double,Date
+
+#need to improve
+1.currently the java/scala data type are implicitly converted to the build-in type using
+the scala implicit class, however it can't not convert null which is a special type in
+java, so when doing computation like sum,order by on column which has a null value, the
+code will throw an exception. In another word, the query engine can not accept null if you
+wanna to some computation on a column.
+
+2.The engine uses the build in function
+```scala
+sortBy[B](f: A => B)(implicit ord: Ordering[B]): Repr = sorted(ord on f)
+```
+to do order by, as the engine would support clause like
+```sql
+order by a desc, b asc
+```
+even the parser has no problem to parse it.
