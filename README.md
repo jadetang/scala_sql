@@ -32,8 +32,8 @@ String,Integer,Double,Date
 1.currently the java/scala data type are implicitly converted to the build-in type using
 the scala implicit class, however it can't not convert null which is a special type in
 java, so when doing computation like sum,order by on column which has a null value, the
-code will throw an exception. In another word, the query engine can not accept null if you
-wanna to some computation on a column.
+code will throw an exception. In another word, if a column has a null value, you can not
+do computation on it.
 
 2.The engine uses the build in function
 ```scala
@@ -43,4 +43,3 @@ to do order by, as the engine do not support clause like
 ```sql
 order by a desc, b asc
 ```
-even the parser has no problem to parse it.
