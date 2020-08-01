@@ -1,5 +1,5 @@
 ## Motivation
-In some scenario of stream computation, the raw data are usually collected from a message queue like kafka，which will be persistented for further analyze. For most of the time, the raw data are store as a simple java bean in memory and could easily be converted to a Map. The scala_sql is designed to run simple SQL on the data structure  List&lt;Map>, allowing the programmer to do some real time computing.
+In some scenario of stream computation, the raw data are usually collected from a message queue like kafka，which will be persistented for further analyze. For most of the time, the raw data are stored as a simple Java bean in memory and could easily be converted to a HashMap. The scala_sql is designed to run simple SQL query on the data structure  List&lt;Map>, allowing the programmer to do some real time computing.
 
 ### Demo
 suppose there is a List<Map> called user,which contains these data:  
@@ -29,7 +29,7 @@ order by, group by, limit
 String,Integer,Double,Date
 
 ### need to improve
-1.currently the java/scala data type are implicitly converted to the build-in type using
+1.Currently the java/scala data type are implicitly converted to the build-in type using
 the scala implicit class, however it can't not convert null which is a special type in
 java, so when doing computation like sum,order by on column which has a null value, the
 code will throw an exception. In another word, if a column has a null value, you can not
