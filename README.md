@@ -16,11 +16,12 @@ suppose there is a List<Map> called user,which contains these data:
 Engine.query(user,"select count(user) as number,name from user group by name")
 ```  
 will result in：  
+```shell
 [number:1,name:dudu]  
 [number:4,name:tsc]  
 [number:1,name:xiaohua]  
 [number:1,name:syy]  
-
+```
 ### supported function and clause
 max,min,sum,count,count(distinct),avg
 order by, group by, limit
